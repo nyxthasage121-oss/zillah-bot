@@ -149,10 +149,10 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
 
     conn.execute(
         "INSERT OR REPLACE INTO server_config (guild_id, auspex_role_id, mod_role_id, is_configured) VALUES (?, ?, ?, 1)",
-        [guild_id, auspex_role.id, mod_role.id]
+        (guild_id, auspex_role.id, mod_role.id)
     )
 
-    conn.execute("DELETE FROM vision_weights WHERE guild_id = ?", [guild_id])
+    conn.execute("DELETE FROM vision_weights WHERE guild_id = ?", (guild_id,)
 
     default_weights = [
         ("Standard Vision", 40),
@@ -169,10 +169,10 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
     for vision_type, weight in default_weights:
         conn.execute(
             "INSERT INTO vision_weights (guild_id, vision_type, weight) VALUES (?, ?, ?)",
-            [guild_id, vision_type, weight]
+            (guild_id, vision_type, weight)
         )
 
-    conn.execute("DELETE FROM thread_pool WHERE guild_id = ?", [guild_id])
+    conn.execute("DELETE FROM thread_pool WHERE guild_id = ?", (guild_id,)
 
     default_motifs = [
         "a drowned woman with no face",
@@ -192,7 +192,7 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
     for motif in default_motifs:
         conn.execute(
             "INSERT INTO thread_pool (guild_id, motif) VALUES (?, ?)",
-            [guild_id, motif]
+            (guild_id, motif)
         )
 
     conn.commit()
@@ -218,7 +218,7 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
 
     result = conn.execute(
         "SELECT mod_role_id, is_configured FROM server_config WHERE guild_id = ?",
-        [guild_id]
+        (guild_id,)
     ).fetchone()
 
     if not result or result[1] == 0:
@@ -237,10 +237,10 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
             ephemeral=True
         )
         return
-
+    
     conn.execute(
         "UPDATE server_config SET premonition_channel_id = ? WHERE guild_id = ?",
-        [channel.id, guild_id]
+        (channel.id, guild_id,)
     )
     conn.commit()
 
