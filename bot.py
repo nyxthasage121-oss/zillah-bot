@@ -152,7 +152,7 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
         (guild_id, auspex_role.id, mod_role.id)
     )
 
-    conn.execute("DELETE FROM vision_weights WHERE guild_id = ?", (guild_id))
+    conn.execute("DELETE FROM vision_weights WHERE guild_id = ?", (guild_id,))
 
     default_weights = [
         ("Standard Vision", 40),
@@ -172,7 +172,7 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
             (guild_id, vision_type, weight)
         )
 
-    conn.execute("DELETE FROM thread_pool WHERE guild_id = ?", (guild_id))
+    conn.execute("DELETE FROM thread_pool WHERE guild_id = ?", (guild_id,))
 
     default_motifs = [
         "a drowned woman with no face",
