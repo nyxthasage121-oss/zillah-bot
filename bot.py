@@ -159,6 +159,113 @@ def setup_database():
     conn.commit()
     conn.close()
     print("Database ready.")
+
+    # ── COMMANDS ──────────────────────────────────────────────────────────────────
+
+# ── /setup ────────────────────────────────────────────────────────────────────
+# Initializes Zillah for a server. Must be run before any other commands work.
+# Only users with Discord Administrator permissions can run this.
+# Takes two arguments: the Auspex role and the Mod/ST role.
+@tree.command(name="setup", description="Initialize Zillah for this server")
+@app_commands.describe(
+    auspex_role="The role that grants access to /premonition",
+    mod_role="The role that grants access to ST commands"
+)
+async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod_role: discord.Role):
+    
+    # Check if the user has Administrator permissions.
+    # This is the only command that checks Discord's built-in permissions
+    # instead of the server's configured mod_role, because mod_role
+    # doesn't exist yet when setup is being run for the first time.
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message(
+            "Only server administrators can run /setup.", 
+            ephemeral=True
+        )
+        return
+
+    # Get the guild_id — this is Discord's unique ID for this server.
+    # Every database operation uses this to keep servers separate.
+    guild_id = interaction.guild_id
+
+    # Connect to the database.
+    conn = sqlite3.connect("zillah.db")
+    cursor = conn.cursor()
+
+    # Insert or update the server config row for this guild.
+    # INSERT OR REPLACE means: if a row with this guild_id already exists,
+    # replace it. If it doesn't exist, create it.
+    # This means /setup can be safely run again to reset configuration.
+    cursor.execute("""
+        INSERT OR REPLACE INTO server_config 
+        (guild_id, auspex_role_id, mod_role_id, is_configured)
+        VALUES (?, ?, ?, 1)
+    """, (guild_id, auspex_role.id, mod_role.id))
+
+    # Populate vision_weights with default values for this server.
+    # We delete existing weights first so re-running /setup resets them.
+    cursor.execute("DELETE FROM vision_weights WHERE guild_id = ?", (guild_id,))
+    
+    # Default vision types and their weights.
+    # Higher number = more likely to appear.
+    default_weights = [
+        ("Standard Vision", 40),
+        ("Lucid Vision", 15),
+        ("Glitch Vision", 15),
+        ("Echo Vision", 10),
+        ("Resonance Bleed", 7),
+        ("Nightmare Bleed", 7),
+        ("The Witness", 5),
+        ("The Warning", 3),
+        ("Retrocognition Surge", 3),
+    ]
+
+    # Insert each vision type with its default weight for this server.
+    for vision_type, weight in default_weights:
+        cursor.execute("""
+            INSERT INTO vision_weights (guild_id, vision_type, weight)
+            VALUES (?, ?, ?)
+        """, (guild_id, vision_type, weight))
+
+    # Populate the thread pool with default motifs for this server.
+    # These are the symbols Zillah can randomly assign as Vision Threads.
+    cursor.execute("DELETE FROM thread_pool WHERE guild_id = ?", (guild_id,))
+
+    default_motifs = [
+        "a drowned woman with no face",
+        "the smell of smoke with no source",
+        "a broken clock frozen at the same hour",
+        "the sound of bells that no one else hears",
+        "a red door that appears in every vision",
+        "a crow that watches but never moves",
+        "handwriting that almost resembles your own",
+        "the taste of blood that isn't yours",
+        "a figure standing at the edge of every scene",
+        "the feeling of being watched from below",
+        "a child's laughter in empty rooms",
+        "mirrors that show the wrong reflection",
+    ]
+
+    for motif in default_motifs:
+        cursor.execute("""
+            INSERT INTO thread_pool (guild_id, motif)
+            VALUES (?, ?)
+        """, (guild_id, motif))
+
+    # Save everything and close the connection.
+    conn.commit()
+    conn.close()
+
+    # Confirm to the admin that setup is complete.
+    # ephemeral=True means only they can see this response.
+    await interaction.response.send_message(
+        f"Zillah is configured.\n"
+        f"Auspex role: {auspex_role.mention}\n"
+        f"Mod role: {mod_role.mention}\n"
+        f"Default vision weights and thread pool are ready.\n"
+        f"Use /set_channel to designate the premonition channel.",
+        ephemeral=True
+    )
 # ── EVENTS ───────────────────────────────────────────────────────────────────
 # @bot.event means "run this function when this Discord event happens"
 # on_ready fires once, when the bot successfully connects to Discord.
