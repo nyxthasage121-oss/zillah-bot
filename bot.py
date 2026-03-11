@@ -8,7 +8,7 @@ from discord import app_commands
 # os lets us read environment variables — that's how we get our secret token
 # without hardcoding it into the file
 import os
-import libsql_client
+import libsql_experimental as libsql
 import asyncio
 
 # dotenv reads our .env file and loads those variables into the environment
@@ -42,8 +42,8 @@ tree = app_commands.CommandTree(bot)
 # We call this every time we need to talk to the database.
 # The "with" pattern ensures the connection closes automatically when done.
 def get_db_client():
-    return libsql_client.create_client(
-        url=os.getenv("TURSO_DATABASE_URL"),
+    return libsql.connect(
+        database=os.getenv("TURSO_DATABASE_URL"),
         auth_token=os.getenv("TURSO_AUTH_TOKEN")
     )
 
