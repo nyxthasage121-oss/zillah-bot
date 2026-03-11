@@ -266,6 +266,62 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
         f"Use /set_channel to designate the premonition channel.",
         ephemeral=True
     )
+# ── /set_channel ──────────────────────────────────────────────────────────────
+# Sets the channel where /premonition is active for this server.
+# Only users with the configured mod_role can run this.
+@tree.command(name="set_channel", description="Set the channel where /premonition is active")
+@app_commands.describe(
+    channel="The channel where players will use /premonition"
+)
+async def set_channel(interaction: discord.Interaction, channel: discord.TextChannel):
+
+    guild_id = interaction.guild_id
+
+    # Connect and check if this server has been configured.
+    # We'll reuse this pattern in every command — always check
+    # if /setup has been run before doing anything else.
+    conn = sqlite3.connect("zillah.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT mod_role_id, is_configured FROM server_config WHERE guild_id = ?", (guild_id,))
+    row = cursor.fetchone()
+
+    # If no row exists or is_configured is 0, setup hasn't been run.
+    if not row or row[1] == 0:
+        await interaction.response.send_message(
+            "Zillah hasn't been configured yet. An administrator needs to run /setup first.",
+            ephemeral=True
+        )
+        conn.close()
+        return
+
+    # Check if the user has the mod role for this server.
+    # row[0] is the mod_role_id we stored during /setup.
+    mod_role_id = row[0]
+    user_roles = [role.id for role in interaction.user.roles]
+
+    if mod_role_id not in user_roles:
+        await interaction.response.send_message(
+            "You don't have permission to use this command.",
+            ephemeral=True
+        )
+        conn.close()
+        return
+
+    # Update the premonition_channel_id for this server.
+    cursor.execute("""
+        UPDATE server_config SET premonition_channel_id = ?
+        WHERE guild_id = ?
+    """, (channel.id, guild_id))
+
+    conn.commit()
+    conn.close()
+
+    await interaction.response.send_message(
+        f"Premonition channel set to {channel.mention}.",
+        ephemeral=True
+    )
+
 # ── EVENTS ───────────────────────────────────────────────────────────────────
 # @bot.event means "run this function when this Discord event happens"
 # on_ready fires once, when the bot successfully connects to Discord.
