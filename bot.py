@@ -239,16 +239,16 @@ if mod_role_id not in user_roles:
         return
     
 conn.execute(
-    "UPDATE server_config SET premonition_channel_id = ? WHERE guild_id = ?",
-    (channel.id, guild_id)
-)
+        "UPDATE server_config SET premonition_channel_id = ? WHERE guild_id = ?",
+        (channel.id, guild_id)
+    )
     conn.commit()
 
     await interaction.response.send_message(
         f"Premonition channel set to {channel.mention}.",
         ephemeral=True
     )
-
+    
 # ── EVENTS ───────────────────────────────────────────────────────────────────
 # @bot.event means "run this function when this Discord event happens"
 # on_ready fires once, when the bot successfully connects to Discord.
