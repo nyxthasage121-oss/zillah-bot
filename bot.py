@@ -228,10 +228,10 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
         )
         return
 
-    mod_role_id = result[0]
-    user_roles = [role.id for role in interaction.user.roles]
+   mod_role_id = int(result[0])
+user_roles = [int(role.id) for role in interaction.user.roles]
 
-    if mod_role_id not in user_roles:
+if mod_role_id not in user_roles:
         await interaction.response.send_message(
             "You don't have permission to use this command.",
             ephemeral=True
