@@ -165,9 +165,9 @@ def setup_database():
 @bot.event
 async def on_ready():
     setup_database()
-    await tree.sync()
-    # Print to console so we know it worked. Railway shows this in logs.
-    print(f"Zillah is online. Logged in as {bot.user}")
+    print("Database ready.")
+    await tree.sync()   
+    print(f"Zillah is online. Logged in as {bot.user}. Commands synced. Database ready.")
 
 # ── ON GUILD JOIN ─────────────────────────────────────────────────────────────
 # This fires every time Zillah is added to a new Discord server.
