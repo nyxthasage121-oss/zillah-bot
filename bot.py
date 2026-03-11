@@ -228,7 +228,7 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
         )
         return
 
-   mod_role_id = int(result[0])
+mod_role_id = int(result[0])
 user_roles = [int(role.id) for role in interaction.user.roles]
 
 if mod_role_id not in user_roles:
