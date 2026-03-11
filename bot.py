@@ -127,7 +127,7 @@ def setup_database():
     conn.commit()
     print("Database ready.")
 
-    # ── COMMANDS ──────────────────────────────────────────────────────────────────
+# ── COMMANDS ──────────────────────────────────────────────────────────────────
 
 # ── /setup ────────────────────────────────────────────────────────────────────
 @tree.command(name="setup", description="Initialize Zillah for this server")
@@ -238,10 +238,10 @@ if mod_role_id not in user_roles:
         )
         return
     
-    conn.execute(
-        "UPDATE server_config SET premonition_channel_id = ? WHERE guild_id = ?",
-        (channel.id, guild_id,)
-    )
+conn.execute(
+    "UPDATE server_config SET premonition_channel_id = ? WHERE guild_id = ?",
+    (channel.id, guild_id)
+)
     conn.commit()
 
     await interaction.response.send_message(
