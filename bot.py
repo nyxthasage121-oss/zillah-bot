@@ -246,8 +246,9 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
 
     conn.execute(
         "UPDATE server_config SET premonition_channel_id = ? WHERE guild_id = ?",
-        (channel.id, guild_id)
+        (str(channel.id), guild_id)
     )
+    
     conn.commit()
 
     await interaction.response.send_message(
@@ -287,7 +288,7 @@ async def premonition(interaction: discord.Interaction):
     # ── STEP 2: CHECK CHANNEL ─────────────────────────────────────────────
     print(f"DEBUG channel_id from DB: {premonition_channel_id} type: {type(premonition_channel_id)}")
     print(f"DEBUG interaction.channel_id: {interaction.channel_id} type: {type(interaction.channel_id)}")
-    if premonition_channel_id and interaction.channel_id != int(premonition_channel_id):
+    if premonition_channel_id and str(interaction.channel_id) != str(premonition_channel_id):
         await interaction.response.send_message(
             "Visions can only be sought in the designated channel.",
             ephemeral=True
