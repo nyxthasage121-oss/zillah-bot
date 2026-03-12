@@ -207,7 +207,7 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
     )
 
 # ── /set_channel ──────────────────────────────────────────────────────────────
-@@tree.command(name="set_channel", description="Set the channel where /premonition is active")
+@tree.command(name="set_channel", description="Set the channel where /premonition is active")
 @app_commands.describe(
     channel="The channel where players will use /premonition"
 )
