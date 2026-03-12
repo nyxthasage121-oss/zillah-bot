@@ -207,11 +207,7 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
     )
 
 # ── /set_channel ──────────────────────────────────────────────────────────────
-@tree.command(
-    name="set_channel",
-    description="Set the channel where /premonition is active",
-    default_member_permissions=discord.Permissions(manage_channels=True),
-)
+@tree.command(name="set_channel", description="Set the channel where /premonition is active")
 @app_commands.describe(
     channel="The channel where players will use /premonition"
 )
@@ -238,7 +234,7 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
 
     if not (is_admin or has_mod_role):
         await interaction.response.send_message(
-            "You don't have permission to use this command. You need the server's mod role or Administrator.",
+            "You don't have permission to use this command.",
             ephemeral=True
         )
         return
