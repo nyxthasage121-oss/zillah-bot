@@ -207,12 +207,11 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
     )
 
 # ── /set_channel ──────────────────────────────────────────────────────────────
-@tree.command(name="set_channel", description="Set the channel where /premonition is active")
+@@tree.command(name="set_channel", description="Set the channel where /premonition is active")
 @app_commands.describe(
     channel="The channel where players will use /premonition"
 )
 async def set_channel(interaction: discord.Interaction, channel: discord.TextChannel):
-
     guild_id = interaction.guild_id
     conn = get_db()
 
@@ -228,17 +227,17 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
         )
         return
 
-mod_role_id = int(result[0])
-user_roles = [int(role.id) for role in interaction.user.roles]
+    mod_role_id = int(result[0])
+    user_roles = [int(role.id) for role in interaction.user.roles]
 
-if mod_role_id not in user_roles:
+    if mod_role_id not in user_roles:
         await interaction.response.send_message(
             "You don't have permission to use this command.",
             ephemeral=True
         )
         return
-    
-conn.execute(
+
+    conn.execute(
         "UPDATE server_config SET premonition_channel_id = ? WHERE guild_id = ?",
         (channel.id, guild_id)
     )
@@ -248,7 +247,7 @@ conn.execute(
         f"Premonition channel set to {channel.mention}.",
         ephemeral=True
     )
-    
+
 # ── EVENTS ───────────────────────────────────────────────────────────────────
 # @bot.event means "run this function when this Discord event happens"
 # on_ready fires once, when the bot successfully connects to Discord.
