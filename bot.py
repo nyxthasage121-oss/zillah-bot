@@ -284,6 +284,9 @@ async def premonition(interaction: discord.Interaction):
 
     # ── STEP 2: CHECK CHANNEL ─────────────────────────────────────────────
     # If a premonition channel has been set, only allow the command there.
+    # ── STEP 2: CHECK CHANNEL ─────────────────────────────────────────────
+    print(f"DEBUG channel_id from DB: {premonition_channel_id} type: {type(premonition_channel_id)}")
+    print(f"DEBUG interaction.channel_id: {interaction.channel_id} type: {type(interaction.channel_id)}")
     if premonition_channel_id and interaction.channel_id != int(premonition_channel_id):
         await interaction.response.send_message(
             "Visions can only be sought in the designated channel.",
