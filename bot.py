@@ -9,7 +9,8 @@ from discord import app_commands
 # without hardcoding it into the file
 import os
 import libsql_experimental as libsql
-import asyncio
+import random
+from datetime import datetime, timezone
 
 # dotenv reads our .env file and loads those variables into the environment
 # so os.getenv() can find them
@@ -36,6 +37,10 @@ bot = discord.Client(intents=intents)
 # This is the slash command system, attached to our bot.
 # Every /command we build gets registered through this object.
 tree = app_commands.CommandTree(bot)
+# Initialize the Anthropic client.
+# This is what we use to call Claude and generate visions.
+import anthropic
+anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 # ── DATABASE ──────────────────────────────────────────────────────────────────
 # Returns a connected Turso client.
@@ -249,6 +254,186 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
         f"Premonition channel set to {channel.mention}.",
         ephemeral=True
     )
+
+# ── /premonition ──────────────────────────────────────────────────────────────
+# The main player command. Generates an AI vision for the player.
+# Checks channel, role, and cooldown before making any API calls.
+@tree.command(name="premonition", description="Receive a vision from beyond the veil")
+async def premonition(interaction: discord.Interaction):
+
+    guild_id = interaction.guild_id
+    user_id = interaction.user.id
+    conn = get_db()
+
+    # ── STEP 1: CHECK SERVER IS CONFIGURED ────────────────────────────────
+    config = conn.execute(
+        "SELECT auspex_role_id, premonition_channel_id, uses_per_night, is_configured FROM server_config WHERE guild_id = ?",
+        (guild_id,)
+    ).fetchone()
+
+    if not config or config[3] == 0:
+        await interaction.response.send_message(
+            "Zillah hasn't been configured yet. An administrator needs to run /setup first.",
+            ephemeral=True
+        )
+        return
+
+    auspex_role_id = int(config[0])
+    premonition_channel_id = config[1]
+    uses_per_night = config[2]
+
+    # ── STEP 2: CHECK CHANNEL ─────────────────────────────────────────────
+    # If a premonition channel has been set, only allow the command there.
+    if premonition_channel_id and interaction.channel_id != int(premonition_channel_id):
+        await interaction.response.send_message(
+            "Visions can only be sought in the designated channel.",
+            ephemeral=True
+        )
+        return
+
+    # ── STEP 3: CHECK AUSPEX ROLE ─────────────────────────────────────────
+    user_roles = [int(role.id) for role in interaction.user.roles]
+    if auspex_role_id not in user_roles:
+        await interaction.response.send_message(
+            "You do not possess the sight required to seek visions.",
+            ephemeral=True
+        )
+        return
+
+    # ── STEP 4: CHECK COOLDOWN ────────────────────────────────────────────
+    cooldown = conn.execute(
+        "SELECT uses_this_night, last_reset_timestamp FROM player_cooldowns WHERE guild_id = ? AND user_id = ?",
+        (guild_id, user_id)
+    ).fetchone()
+
+    now = datetime.now(timezone.utc)
+
+    if cooldown:
+        uses_this_night = cooldown[0]
+        last_reset = datetime.fromisoformat(cooldown[1]) if cooldown[1] else None
+
+        # Check if a reset is needed based on the server's night length.
+        # For now we reset if it's been more than night_length_days * 24 hours.
+        # Full sundown-based reset comes later.
+        if last_reset:
+            hours_elapsed = (now - last_reset).total_seconds() / 3600
+            night_length_hours = 14 * 24  # default 14 days in hours
+            if hours_elapsed >= night_length_hours:
+                # Reset the cooldown
+                conn.execute(
+                    "UPDATE player_cooldowns SET uses_this_night = 0, last_reset_timestamp = ? WHERE guild_id = ? AND user_id = ?",
+                    (now.isoformat(), guild_id, user_id)
+                )
+                conn.commit()
+                uses_this_night = 0
+
+        if uses_this_night >= uses_per_night:
+            await interaction.response.send_message(
+                "The veil does not part twice in the same night. Your sight will return when the sun next sets.",
+                ephemeral=True
+            )
+            return
+    else:
+        uses_this_night = 0
+
+    # ── STEP 5: PICK VISION TYPE ──────────────────────────────────────────
+    # Pull vision weights for this server and pick one randomly.
+    weights_rows = conn.execute(
+        "SELECT vision_type, weight FROM vision_weights WHERE guild_id = ?",
+        (guild_id,)
+    ).fetchall()
+
+    if not weights_rows:
+        await interaction.response.send_message(
+            "No vision types are configured. An ST needs to run /setup.",
+            ephemeral=True
+        )
+        return
+
+    vision_types = [row[0] for row in weights_rows]
+    weights = [row[1] for row in weights_rows]
+    chosen_type = random.choices(vision_types, weights=weights, k=1)[0]
+
+    # ── STEP 6: CHECK FOR ACTIVE VISION THREAD ────────────────────────────
+    # If the player has an active Vision Thread, pass the motif to the prompt.
+    thread = conn.execute(
+        "SELECT motif FROM vision_threads WHERE guild_id = ? AND user_id = ? AND is_active = 1",
+        (guild_id, user_id)
+    ).fetchone()
+    active_motif = thread[0] if thread else None
+
+    # ── STEP 7: DEFER THE RESPONSE ────────────────────────────────────────
+    # API calls take a moment. Deferring tells Discord "we're working on it"
+    # so the interaction doesn't time out while we wait for Claude.
+    await interaction.response.defer()
+
+    # ── STEP 8: BUILD THE PROMPT AND CALL CLAUDE ──────────────────────────
+    thread_instruction = ""
+    if active_motif:
+        thread_instruction = f"\n\nImportant: Weave a subtle, oblique reference to the following motif somewhere into the vision. Do not make it obvious — it should feel like it might be coincidence: {active_motif}"
+
+    prompt = f"""You are generating a vision for a Vampire: The Masquerade 5th Edition play-by-post game. The player has the Auspex discipline and has received a premonition.
+
+Vision type: {chosen_type}
+
+Vision type descriptions:
+- Standard Vision: An atmospheric paragraph of sensory impressions with no clear meaning. Eerie, poetic, unsettling.
+- Lucid Vision: A vivid, slightly more coherent vision that feels almost meaningful but remains ambiguous.
+- Glitch Vision: A corrupted, fragmented vision. Use unusual formatting — incomplete sentences, repeated words, sudden cuts. Should feel broken.
+- Echo Vision: A flash of emotional residue from a place or object. Impressionistic, tied to feeling rather than sight.
+- Resonance Bleed: Written in second person present tense, as if the player is accidentally experiencing someone else's emotions right now.
+- Nightmare Bleed: A vision that doesn't close cleanly. Write the vision, then add a short italicized postscript suggesting it has followed them into waking.
+- The Witness: Written in first person from an unknown subject's point of view. The player sees through someone else's eyes briefly.
+- The Warning: A vision with directional urgency. Vague but clearly important. End with a single sentence of quiet dread.
+- Retrocognition Surge: Multiple fragmented timeline impressions simultaneously. Use formatting to suggest fragmentation — dashes, breaks, incomplete images.
+
+Generate a single vision appropriate for the type above. Write 2-4 sentences. Be evocative and atmospheric. Do not explain the vision or break immersion. Do not include any preamble or labels — just the vision text itself.{thread_instruction}"""
+
+    try:
+        message = anthropic_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=300,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        vision_text = message.content[0].text
+
+    except Exception as e:
+        print(f"Anthropic API error: {e}")
+        await interaction.followup.send(
+            "The veil trembles but does not part. Try again in a moment.",
+            ephemeral=True
+        )
+        return
+
+    # ── STEP 9: UPDATE COOLDOWN ───────────────────────────────────────────
+    if cooldown:
+        conn.execute(
+            "UPDATE player_cooldowns SET uses_this_night = uses_this_night + 1 WHERE guild_id = ? AND user_id = ?",
+            (guild_id, user_id)
+        )
+    else:
+        conn.execute(
+            "INSERT INTO player_cooldowns (guild_id, user_id, uses_this_night, last_reset_timestamp) VALUES (?, ?, 1, ?)",
+            (guild_id, user_id, now.isoformat())
+        )
+    conn.commit()
+
+    # ── STEP 10: SAVE TO VISION HISTORY ───────────────────────────────────
+    conn.execute(
+        "INSERT INTO vision_history (guild_id, user_id, vision_type, vision_text, timestamp, is_st_triggered) VALUES (?, ?, ?, ?, ?, 0)",
+        (guild_id, user_id, chosen_type, vision_text, now.isoformat())
+    )
+    conn.commit()
+
+    # ── STEP 11: POST THE VISION ──────────────────────────────────────────
+    embed = discord.Embed(
+        description=f"*{vision_text}*",
+        color=0x8B0000
+    )
+    embed.set_footer(text=chosen_type)
+    embed.set_author(name=interaction.user.display_name)
+
+    await interaction.followup.send(embed=embed)
 
 # ── EVENTS ───────────────────────────────────────────────────────────────────
 # @bot.event means "run this function when this Discord event happens"
