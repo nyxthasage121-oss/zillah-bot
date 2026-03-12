@@ -46,23 +46,14 @@ anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 # Returns a connected Turso client.
 # We call this every time we need to talk to the database.
 # The "with" pattern ensures the connection closes automatically when done.
-def get_db():
-    conn = libsql.connect(
-        database=os.getenv("TURSO_DATABASE_URL"),
-        auth_token=os.getenv("TURSO_AUTH_TOKEN")
-    )
-    return conn
-
-# Sets up all database tables if they don't exist yet.
-# Now async because Turso requires await for all database operations.
 def setup_database():
     conn = get_db()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS server_config (
-            guild_id INTEGER PRIMARY KEY,
-            auspex_role_id INTEGER,
-            mod_role_id INTEGER,
-            premonition_channel_id INTEGER,
+            guild_id TEXT PRIMARY KEY,
+            auspex_role_id TEXT,
+            mod_role_id TEXT,
+            premonition_channel_id TEXT,
             night_length_days INTEGER DEFAULT 14,
             sundown_time TEXT DEFAULT '20:00',
             sundown_timezone TEXT DEFAULT 'EST',
@@ -73,7 +64,7 @@ def setup_database():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS vision_weights (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id INTEGER,
+            guild_id TEXT,
             vision_type TEXT,
             weight INTEGER DEFAULT 10
         )
@@ -81,8 +72,8 @@ def setup_database():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS player_cooldowns (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id INTEGER,
-            user_id INTEGER,
+            guild_id TEXT,
+            user_id TEXT,
             uses_this_night INTEGER DEFAULT 0,
             last_reset_timestamp TEXT
         )
@@ -90,8 +81,8 @@ def setup_database():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS vision_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id INTEGER,
-            user_id INTEGER,
+            guild_id TEXT,
+            user_id TEXT,
             vision_type TEXT,
             vision_text TEXT,
             timestamp TEXT,
@@ -101,8 +92,8 @@ def setup_database():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS vision_threads (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id INTEGER,
-            user_id INTEGER,
+            guild_id TEXT,
+            user_id TEXT,
             motif TEXT,
             start_timestamp TEXT,
             duration_nights INTEGER,
@@ -113,8 +104,8 @@ def setup_database():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS detected_symbols (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id INTEGER,
-            user_id INTEGER,
+            guild_id TEXT,
+            user_id TEXT,
             symbol TEXT,
             first_seen TEXT,
             last_seen TEXT,
@@ -124,7 +115,7 @@ def setup_database():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS thread_pool (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id INTEGER,
+            guild_id TEXT,
             motif TEXT,
             is_active INTEGER DEFAULT 1
         )
@@ -132,8 +123,7 @@ def setup_database():
     conn.commit()
     print("Database ready.")
 
-# ── COMMANDS ──────────────────────────────────────────────────────────────────
-
+# ── /setup ────────────────────────────────────────────────────────────────────
 # ── /setup ────────────────────────────────────────────────────────────────────
 @tree.command(name="setup", description="Initialize Zillah for this server")
 @app_commands.describe(
@@ -149,12 +139,12 @@ async def setup(interaction: discord.Interaction, auspex_role: discord.Role, mod
         )
         return
 
-    guild_id = interaction.guild_id
+    guild_id = str(interaction.guild_id)
     conn = get_db()
 
     conn.execute(
         "INSERT OR REPLACE INTO server_config (guild_id, auspex_role_id, mod_role_id, is_configured) VALUES (?, ?, ?, 1)",
-        (guild_id, auspex_role.id, mod_role.id)
+        (guild_id, str(auspex_role.id), str(mod_role.id))
     )
 
     conn.execute("DELETE FROM vision_weights WHERE guild_id = ?", (guild_id,))
@@ -248,7 +238,7 @@ async def set_channel(interaction: discord.Interaction, channel: discord.TextCha
         "UPDATE server_config SET premonition_channel_id = ? WHERE guild_id = ?",
         (str(channel.id), guild_id)
     )
-    
+
     conn.commit()
 
     await interaction.response.send_message(
