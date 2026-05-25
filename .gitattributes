@@ -1,0 +1,3 @@
+# Normalise all line endings to LF on commit.
+# This stops Windows from producing CRLF warnings on every git operation.
+* text=auto eol=lf

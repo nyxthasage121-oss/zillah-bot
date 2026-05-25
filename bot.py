@@ -2,6 +2,7 @@
 Bot client, event handlers, and startup wiring.
 """
 
+import logging
 import os
 import discord
 from discord import app_commands
@@ -9,6 +10,8 @@ from discord import app_commands
 import clients
 import db
 import commands as cmd_registry
+
+logger = logging.getLogger("zillah.bot")
 
 
 def create_bot() -> tuple[discord.Client, app_commands.CommandTree]:
@@ -25,11 +28,35 @@ def create_bot() -> tuple[discord.Client, app_commands.CommandTree]:
     async def on_ready() -> None:
         db.setup_database()
         await tree.sync()
-        print(f"Zillah is online. Logged in as {bot.user}. Commands synced.")
+        logger.info("Zillah is online. Logged in as %s. Commands synced.", bot.user)
 
     @bot.event
     async def on_guild_join(guild: discord.Guild) -> None:
-        print(f"Zillah joined a new server: {guild.name} (ID: {guild.id})")
+        logger.info("Joined new server: %s (ID: %s)", guild.name, guild.id)
         db.init_server(str(guild.id))
+
+    @tree.error
+    async def on_app_command_error(
+        interaction: discord.Interaction,
+        error: app_commands.AppCommandError,
+    ) -> None:
+        """Global fallback: log the error and send the user a friendly message."""
+        cmd_name = interaction.command.name if interaction.command else "unknown"
+        logger.error(
+            "Unhandled error in /%s (user=%s guild=%s): %s",
+            cmd_name,
+            interaction.user,
+            interaction.guild_id,
+            error,
+            exc_info=error,
+        )
+        msg = "Something went wrong. Please try again in a moment."
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(msg, ephemeral=True)
+            else:
+                await interaction.response.send_message(msg, ephemeral=True)
+        except Exception:
+            pass  # best-effort — don't let the error handler itself crash
 
     return bot, tree
