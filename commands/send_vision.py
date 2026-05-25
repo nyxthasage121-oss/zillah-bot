@@ -10,6 +10,7 @@ import clients
 import db
 from commands.premonition import build_vision_prompt
 from config import CLAUDE_MODEL, ST_EMBED_COLOR, VISION_ALL_TYPES
+from utils import get_clan_flavor
 
 
 def _has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> bool:
@@ -135,7 +136,9 @@ async def send_vision(
             errors += 1
             continue
 
-        embed = discord.Embed(description=f"*{vision_text}*", color=ST_EMBED_COLOR)
+        clan_flavor = get_clan_flavor(player.roles)
+        desc = f"*{clan_flavor}*\n\n*{vision_text}*" if clan_flavor else f"*{vision_text}*"
+        embed = discord.Embed(description=desc, color=ST_EMBED_COLOR)
         embed.set_footer(text=f"{chosen_type} · ST Sent")
         embed.set_author(name=player.display_name)
 

@@ -107,11 +107,13 @@ def setup_database() -> None:
 # ── server_config ─────────────────────────────────────────────────────────────
 
 def get_server_config(guild_id: str) -> tuple | None:
-    """Returns (auspex_role_id, mod_role_id, premonition_channel_id,
-                uses_per_night, is_configured, night_length_days)"""
+    """Returns (auspex_role_id[0], mod_role_id[1], premonition_channel_id[2],
+                uses_per_night[3], is_configured[4], night_length_days[5],
+                sundown_time[6], sundown_timezone[7])"""
     return get_db().execute(
         "SELECT auspex_role_id, mod_role_id, premonition_channel_id, "
-        "uses_per_night, is_configured, night_length_days "
+        "uses_per_night, is_configured, night_length_days, "
+        "sundown_time, sundown_timezone "
         "FROM server_config WHERE guild_id = ?",
         (guild_id,),
     ).fetchone()

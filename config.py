@@ -4,6 +4,8 @@ All mutable server settings live in the database; these are read-only defaults
 used only during /setup.
 """
 
+from datetime import datetime, timezone
+
 DEFAULT_VISION_WEIGHTS: list[tuple[str, int]] = [
     ("Standard Vision",       40),
     ("Lucid Vision",          15),
@@ -75,3 +77,79 @@ AUTO_THREAD_MAX_DURATION = 8     # nights
 # Symbol detection
 SYMBOL_DETECTION_COUNT = 15   # recent visions to scan
 SYMBOL_MIN_VISIONS     = 3    # minimum visions needed before detection runs
+
+# ── Sundown-based night cycles ────────────────────────────────────────────────
+
+# Fixed epoch used to anchor night-cycle counting.  Chosen arbitrarily as a
+# Monday so the very first "night 0" starts cleanly.  Never changes.
+NIGHT_EPOCH = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+# Maps common timezone abbreviations to IANA names.  Anything not listed
+# is passed directly to ZoneInfo; falls back to America/New_York on error.
+TIMEZONE_ALIASES: dict[str, str] = {
+    "EST":  "America/New_York",
+    "EDT":  "America/New_York",
+    "CST":  "America/Chicago",
+    "CDT":  "America/Chicago",
+    "MST":  "America/Denver",
+    "MDT":  "America/Denver",
+    "PST":  "America/Los_Angeles",
+    "PDT":  "America/Los_Angeles",
+    "GMT":  "UTC",
+    "UTC":  "UTC",
+    "BST":  "Europe/London",
+    "CET":  "Europe/Paris",
+    "CEST": "Europe/Paris",
+    "AEST": "Australia/Sydney",
+    "AEDT": "Australia/Sydney",
+}
+
+# ── Clan flavor text ──────────────────────────────────────────────────────────
+# One sentence is chosen at random and prepended (in italics) to the vision
+# embed when the player's Discord roles contain a matching clan name.
+# Matching is case-insensitive substring: "Toreador Initiated" → "toreador" ✓
+
+CLAN_FLAVOR: dict[str, list[str]] = {
+    "toreador": [
+        "Beauty turns to ash at the edges of your sight.",
+        "You taste colour before the image has finished forming.",
+        "The vision arrives like a chord held one beat too long.",
+        "Something exquisite shudders through you and then vanishes.",
+        "Your Auspex sharpens against beauty the way grief sharpens against memory.",
+    ],
+    "tremere": [
+        "The vision tastes of copper and old ink.",
+        "Pattern underlies everything — if only you could read it.",
+        "Your blood resonates with the geometry of what you see.",
+        "You feel the hand that shaped this, even if you cannot name it.",
+        "The vision is a formula with too many unknowns.",
+    ],
+    "malkavian": [
+        "The vision arrives sideways, through a door that wasn't there before.",
+        "You are not sure where the dream ends and you begin.",
+        "Something laughs behind the image — or perhaps that is you.",
+        "The truth comes gift-wrapped in things that make no sense.",
+        "You have seen this before. You will see it again. You are seeing it now.",
+    ],
+    "salubri": [
+        "The suffering in the vision reaches you like sound through water.",
+        "Your third eye aches as the image slowly resolves.",
+        "You feel the wound the vision carries before you understand its shape.",
+        "The light inside it is wrong — too merciful for this world.",
+        "It asks nothing of you except to witness.",
+    ],
+    "hecata": [
+        "The dead speak in the margins of the vision.",
+        "You taste grave-cold at the edges of the image.",
+        "Something on the other side is watching you watch this.",
+        "The vision carries the weight of things already lost.",
+        "Between what was and what is, the vision finds its footing.",
+    ],
+    "banu haqim": [
+        "The vision arrives with the precision of a held breath.",
+        "Your blood remembers what your mind does not.",
+        "Justice — or something that wears its face — moves through the image.",
+        "You assess the vision the way you would assess a threat.",
+        "The truth cuts, even when it is only shadow.",
+    ],
+}

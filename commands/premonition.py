@@ -10,12 +10,12 @@ from discord import app_commands
 import clients
 import db
 from config import (
-    AUTO_THREAD_CHANCE,
     CLAUDE_MODEL,
     GLITCH_VISION_INSTRUCTIONS,
     VISION_EMBED_COLOR,
     VISION_TYPE_DESCRIPTIONS,
 )
+from utils import get_clan_flavor, get_night_start
 from views import LucidVisionView, _run_symbol_detection, _try_auto_thread
 
 
@@ -50,6 +50,7 @@ async def _handle_lucid_vision(
     active_motif: str | None,
     now: datetime,
     cooldown: tuple | None,
+    clan_flavor: str | None = None,
 ) -> None:
     """Generate and post the initial Lucid Vision fragment with choice buttons."""
     max_depth = random.randint(1, 3)
@@ -93,7 +94,8 @@ async def _handle_lucid_vision(
     db.increment_cooldown(guild_id, user_id, now.isoformat(), exists=bool(cooldown))
 
     accumulated = f"*{fragment}*"
-    embed = discord.Embed(description=accumulated, color=VISION_EMBED_COLOR)
+    desc = f"*{clan_flavor}*\n\n{accumulated}" if clan_flavor else accumulated
+    embed = discord.Embed(description=desc, color=VISION_EMBED_COLOR)
     embed.set_footer(text="Lucid Vision")
     embed.set_author(name=interaction.user.display_name)
 
@@ -119,7 +121,8 @@ async def premonition(interaction: discord.Interaction) -> None:
 
     # ── 1. Server configured? ─────────────────────────────────────────────
     # config: auspex_role_id[0], mod_role_id[1], premonition_channel_id[2],
-    #         uses_per_night[3], is_configured[4], night_length_days[5]
+    #         uses_per_night[3], is_configured[4], night_length_days[5],
+    #         sundown_time[6], sundown_timezone[7]
     config = db.get_server_config(guild_id)
     if not config or config[4] == 0:
         await interaction.response.send_message(
@@ -128,10 +131,12 @@ async def premonition(interaction: discord.Interaction) -> None:
         )
         return
 
-    auspex_role_id = str(config[0])
+    auspex_role_id     = str(config[0])
     premonition_channel_id = config[2]
-    uses_per_night = config[3]
-    night_length_days = config[5] or 14
+    uses_per_night     = config[3]
+    night_length_days  = config[5] or 14
+    sundown_time       = config[6] or "20:00"
+    sundown_timezone   = config[7] or "EST"
 
     # ── 2. Correct channel? ───────────────────────────────────────────────
     if premonition_channel_id and str(interaction.channel_id) != str(premonition_channel_id):
@@ -148,7 +153,7 @@ async def premonition(interaction: discord.Interaction) -> None:
         )
         return
 
-    # ── 4. Cooldown check ─────────────────────────────────────────────────
+    # ── 4. Cooldown check (sundown-aligned) ───────────────────────────────
     now = datetime.now(timezone.utc)
     cooldown = db.get_cooldown(guild_id, user_id)
     uses_this_night = 0
@@ -156,11 +161,11 @@ async def premonition(interaction: discord.Interaction) -> None:
     if cooldown:
         uses_this_night = cooldown[0]
         last_reset = datetime.fromisoformat(cooldown[1]) if cooldown[1] else None
-        if last_reset:
-            hours_elapsed = (now - last_reset).total_seconds() / 3600
-            if hours_elapsed >= night_length_days * 24:
-                db.reset_cooldown(guild_id, user_id, now.isoformat())
-                uses_this_night = 0
+        night_start = get_night_start(night_length_days, sundown_time, sundown_timezone)
+        if last_reset is None or last_reset < night_start:
+            # Last cooldown touch predates the current night — fresh start.
+            db.reset_cooldown(guild_id, user_id, now.isoformat())
+            uses_this_night = 0
 
     if uses_this_night >= uses_per_night:
         await interaction.response.send_message(
@@ -192,15 +197,20 @@ async def premonition(interaction: discord.Interaction) -> None:
         else:
             active_motif = thread["motif"]
 
-    # ── 7. Defer while Claude generates ──────────────────────────────────
+    # ── 7. Clan flavor text ───────────────────────────────────────────────
+    clan_flavor = get_clan_flavor(interaction.user.roles)
+
+    # ── 8. Defer while Claude generates ──────────────────────────────────
     await interaction.response.defer()
 
-    # ── 8. Lucid Vision takes a different interactive path ────────────────
+    # ── 9. Lucid Vision takes a different interactive path ────────────────
     if chosen_type == "Lucid Vision":
-        await _handle_lucid_vision(interaction, guild_id, user_id, active_motif, now, cooldown)
+        await _handle_lucid_vision(
+            interaction, guild_id, user_id, active_motif, now, cooldown, clan_flavor
+        )
         return
 
-    # ── 9. Generate standard vision ───────────────────────────────────────
+    # ── 10. Generate standard vision ──────────────────────────────────────
     try:
         response = await asyncio.to_thread(
             functools.partial(
@@ -218,17 +228,18 @@ async def premonition(interaction: discord.Interaction) -> None:
         )
         return
 
-    # ── 10. Persist cooldown + history ────────────────────────────────────
+    # ── 11. Persist cooldown + history ────────────────────────────────────
     db.increment_cooldown(guild_id, user_id, now.isoformat(), exists=bool(cooldown))
     db.save_vision(guild_id, user_id, chosen_type, vision_text, now.isoformat())
 
-    # ── 11. Post the vision ───────────────────────────────────────────────
-    embed = discord.Embed(description=f"*{vision_text}*", color=VISION_EMBED_COLOR)
+    # ── 12. Post the vision ───────────────────────────────────────────────
+    desc = f"*{clan_flavor}*\n\n*{vision_text}*" if clan_flavor else f"*{vision_text}*"
+    embed = discord.Embed(description=desc, color=VISION_EMBED_COLOR)
     embed.set_footer(text=chosen_type)
     embed.set_author(name=interaction.user.display_name)
     await interaction.followup.send(embed=embed)
 
-    # ── 12. Background tasks ──────────────────────────────────────────────
+    # ── 13. Background tasks ──────────────────────────────────────────────
     asyncio.create_task(_run_symbol_detection(guild_id, user_id))
     if not active_motif:
         asyncio.create_task(_try_auto_thread(interaction, guild_id, user_id))

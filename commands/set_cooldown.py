@@ -59,6 +59,8 @@ async def set_cooldown(
     lines = [
         f"Night length: **{updated[5]} days**",
         f"Uses per night: **{updated[3]}**",
+        f"Sundown time: **{updated[6] or '20:00'}**",
+        f"Sundown timezone: **{updated[7] or 'EST'}**",
     ]
     await interaction.response.send_message(
         "Cooldown settings updated.\n" + "\n".join(lines), ephemeral=True
