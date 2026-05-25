@@ -187,6 +187,12 @@ class LucidVisionView(discord.ui.View):
         btn.callback = callback
         self.add_item(btn)
 
+    async def on_timeout(self) -> None:
+        """Save whatever has accumulated if the player let the view expire without finishing."""
+        clean_text = self.accumulated.replace("*", "").strip()
+        if clean_text:
+            db.save_vision(self.guild_id, self.user_id, "Lucid Vision", clean_text, self.now_iso)
+
     async def _on_choice(self, interaction: discord.Interaction, choice: str) -> None:
         # Disable all buttons immediately to prevent double-clicks.
         for item in self.children:
@@ -455,3 +461,47 @@ class JournalView(discord.ui.View):
         self.visions_page = min(self._max_page(), self.visions_page + 1)
         self._refresh_buttons()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+
+# ── ThreadPoolView ────────────────────────────────────────────────────────────
+
+class ThreadPoolView(discord.ui.View):
+    """View for /thread_pool: lists motifs and lets mods remove individual entries."""
+
+    def __init__(self, guild_id: str, pool: list[tuple[int, str]]) -> None:
+        super().__init__(timeout=120)
+        self.guild_id = guild_id
+        self._rebuild(pool)
+
+    def _rebuild(self, pool: list[tuple[int, str]]) -> None:
+        self.clear_items()
+        if not pool:
+            return
+        options = [
+            discord.SelectOption(label=motif[:100], value=str(motif_id))
+            for motif_id, motif in pool[:25]
+        ]
+        select = discord.ui.Select(
+            placeholder="Select a motif to remove…",
+            options=options,
+        )
+        select.callback = self._on_remove
+        self.add_item(select)
+
+    async def _on_remove(self, interaction: discord.Interaction) -> None:
+        motif_id = int(interaction.data["values"][0])
+        db.remove_motif_from_pool(self.guild_id, motif_id)
+        pool = db.get_thread_pool(self.guild_id)
+        self._rebuild(pool)
+        await interaction.response.edit_message(embed=self.build_embed(pool), view=self)
+
+    @staticmethod
+    def build_embed(pool: list[tuple[int, str]]) -> discord.Embed:
+        embed = discord.Embed(title="Vision Thread Pool", color=VISION_EMBED_COLOR)
+        if not pool:
+            embed.description = "The pool is empty. Use `/add_motif` to add new entries."
+        else:
+            lines = [f"{i + 1}. *{motif}*" for i, (_, motif) in enumerate(pool)]
+            embed.description = "\n".join(lines)
+            embed.set_footer(text=f"{len(pool)} motif(s) · Use the dropdown to remove one")
+        return embed

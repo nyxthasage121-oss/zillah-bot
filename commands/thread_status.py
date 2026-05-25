@@ -1,10 +1,9 @@
-from datetime import datetime, timezone
-
 import discord
 from discord import app_commands
 
 import db
 from config import VISION_EMBED_COLOR
+from utils import get_elapsed_nights
 
 
 def _has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> bool:
@@ -31,10 +30,11 @@ async def thread_status(interaction: discord.Interaction) -> None:
         )
         return
 
-    threads = db.get_all_active_threads(guild_id)
     night_length_days = config[5] or 14
-    now = datetime.now(timezone.utc)
+    sundown_time      = config[6] or "20:00"
+    sundown_timezone  = config[7] or "EST"
 
+    threads = db.get_all_active_threads(guild_id)
     embed = discord.Embed(title="Active Vision Threads", color=VISION_EMBED_COLOR)
 
     if not threads:
@@ -48,9 +48,10 @@ async def thread_status(interaction: discord.Interaction) -> None:
             except Exception:
                 name = f"User {t['user_id']}"
 
-            start_dt = datetime.fromisoformat(t["start_timestamp"])
-            elapsed_nights = (now - start_dt).total_seconds() / (night_length_days * 24 * 3600)
-            remaining = max(0, t["duration_nights"] - int(elapsed_nights))
+            elapsed = get_elapsed_nights(
+                t["start_timestamp"], night_length_days, sundown_time, sundown_timezone
+            )
+            remaining = max(0, t["duration_nights"] - elapsed)
             source = "ST" if t["is_st_assigned"] else "Auto"
 
             lines.append(

@@ -24,25 +24,16 @@ def resolve_timezone(tz_string: str) -> ZoneInfo:
         return ZoneInfo("America/New_York")
 
 
-def get_night_start(
+def _anchor_and_length(
     night_length_days: int,
     sundown_time: str,
     sundown_timezone: str,
-) -> datetime:
+) -> tuple[float, datetime]:
     """
-    Return the UTC datetime when the current 'night' began.
+    Shared anchor computation used by get_night_start and get_elapsed_nights.
 
-    Nights are equal-length periods anchored to NIGHT_EPOCH.  Each night
-    starts at sundown_time in sundown_timezone and lasts night_length_days.
-
-    Algorithm
-    ---------
-    1. Convert NIGHT_EPOCH to local time in the configured timezone.
-    2. Snap to the first sundown moment at-or-after that local epoch time
-       (this becomes our reference anchor).
-    3. Compute elapsed seconds from anchor → now (UTC).
-    4. Floor-divide by night length to get the current night index.
-    5. Return anchor + index × night_length as a UTC datetime.
+    Returns (night_seconds, anchor_utc) where anchor_utc is the first sundown
+    moment at-or-after NIGHT_EPOCH in the configured timezone.
     """
     tz = resolve_timezone(sundown_timezone)
 
@@ -53,22 +44,65 @@ def get_night_start(
 
     night_seconds = night_length_days * 24 * 3600
 
-    # First sundown at-or-after NIGHT_EPOCH, expressed in UTC
     epoch_local = NIGHT_EPOCH.astimezone(tz)
     anchor_local = epoch_local.replace(hour=hour, minute=minute, second=0, microsecond=0)
     if anchor_local < epoch_local:
         anchor_local += timedelta(days=1)
-    anchor_utc = anchor_local.astimezone(timezone.utc)
 
+    return night_seconds, anchor_local.astimezone(timezone.utc)
+
+
+def get_night_start(
+    night_length_days: int,
+    sundown_time: str,
+    sundown_timezone: str,
+) -> datetime:
+    """
+    Return the UTC datetime when the current 'night' began.
+
+    Nights are equal-length periods anchored to NIGHT_EPOCH.  Each night
+    starts at sundown_time in sundown_timezone and lasts night_length_days.
+    """
+    night_seconds, anchor_utc = _anchor_and_length(
+        night_length_days, sundown_time, sundown_timezone
+    )
     now_utc = datetime.now(timezone.utc)
     elapsed = (now_utc - anchor_utc).total_seconds()
 
     if elapsed < 0:
-        # Clock is somehow before the anchor (shouldn't happen in production)
-        return anchor_utc
+        return anchor_utc  # shouldn't happen in production
 
     night_index = int(elapsed // night_seconds)
     return anchor_utc + timedelta(seconds=night_index * night_seconds)
+
+
+def get_elapsed_nights(
+    start_iso: str,
+    night_length_days: int,
+    sundown_time: str,
+    sundown_timezone: str,
+) -> int:
+    """
+    Return the number of complete night boundaries crossed since start_iso.
+
+    Uses sundown-aligned night indices so a thread created mid-night counts
+    as having started in night N, and the count only increments when the next
+    sundown fires — not when N×24 hours have elapsed.
+    """
+    night_seconds, anchor_utc = _anchor_and_length(
+        night_length_days, sundown_time, sundown_timezone
+    )
+
+    start_dt = datetime.fromisoformat(start_iso)
+    now_utc = datetime.now(timezone.utc)
+
+    start_elapsed = (start_dt - anchor_utc).total_seconds()
+    start_night_idx = max(0, int(start_elapsed // night_seconds))
+
+    now_elapsed = (now_utc - anchor_utc).total_seconds()
+    current_night_idx = max(0, int(now_elapsed // night_seconds))
+
+    return max(0, current_night_idx - start_night_idx)
 
 
 def get_clan_flavor(roles: list) -> str | None:

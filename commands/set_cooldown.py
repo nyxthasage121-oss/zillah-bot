@@ -1,3 +1,5 @@
+import re
+
 import discord
 from discord import app_commands
 
@@ -39,6 +41,23 @@ async def set_cooldown(
             "You don't have permission to use this command.", ephemeral=True
         )
         return
+
+    # Validate sundown_time format before writing to DB
+    if sundown_time is not None:
+        if not re.fullmatch(r"\d{1,2}:\d{2}", sundown_time):
+            await interaction.response.send_message(
+                "Invalid time format — use `HH:MM` (e.g. `20:00` for 8 pm).", ephemeral=True
+            )
+            return
+        try:
+            h, m = (int(x) for x in sundown_time.split(":"))
+            if not (0 <= h <= 23 and 0 <= m <= 59):
+                raise ValueError
+        except ValueError:
+            await interaction.response.send_message(
+                "Invalid time — hours must be 0–23 and minutes 0–59.", ephemeral=True
+            )
+            return
 
     if all(v is None for v in (night_length_days, uses_per_night, sundown_time, sundown_timezone)):
         await interaction.response.send_message(

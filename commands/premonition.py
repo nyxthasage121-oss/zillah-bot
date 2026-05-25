@@ -2,7 +2,7 @@ import asyncio
 import functools
 import json
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import discord
 from discord import app_commands
@@ -15,7 +15,7 @@ from config import (
     VISION_EMBED_COLOR,
     VISION_TYPE_DESCRIPTIONS,
 )
-from utils import get_clan_flavor, get_night_start
+from utils import get_clan_flavor, get_elapsed_nights, get_night_start
 from views import LucidVisionView, _run_symbol_detection, _try_auto_thread
 
 
@@ -157,20 +157,22 @@ async def premonition(interaction: discord.Interaction) -> None:
     now = datetime.now(timezone.utc)
     cooldown = db.get_cooldown(guild_id, user_id)
     uses_this_night = 0
+    night_start = get_night_start(night_length_days, sundown_time, sundown_timezone)
 
     if cooldown:
         uses_this_night = cooldown[0]
         last_reset = datetime.fromisoformat(cooldown[1]) if cooldown[1] else None
-        night_start = get_night_start(night_length_days, sundown_time, sundown_timezone)
         if last_reset is None or last_reset < night_start:
             # Last cooldown touch predates the current night — fresh start.
             db.reset_cooldown(guild_id, user_id, now.isoformat())
             uses_this_night = 0
 
     if uses_this_night >= uses_per_night:
+        next_night = night_start + timedelta(seconds=night_length_days * 24 * 3600)
+        ts = int(next_night.timestamp())
         await interaction.response.send_message(
-            "The veil does not part twice in the same night. "
-            "Your sight will return when the sun next sets.",
+            f"The veil does not part twice in the same night. "
+            f"Your sight will return <t:{ts}:R>.",
             ephemeral=True,
         )
         return
@@ -190,8 +192,9 @@ async def premonition(interaction: discord.Interaction) -> None:
     active_motif = None
     thread = db.get_active_thread(guild_id, user_id)
     if thread:
-        start_dt = datetime.fromisoformat(thread["start_timestamp"])
-        elapsed_nights = (now - start_dt).total_seconds() / (night_length_days * 24 * 3600)
+        elapsed_nights = get_elapsed_nights(
+            thread["start_timestamp"], night_length_days, sundown_time, sundown_timezone
+        )
         if elapsed_nights >= thread["duration_nights"]:
             db.deactivate_thread(guild_id, user_id)
         else:

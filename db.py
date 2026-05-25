@@ -11,11 +11,17 @@ import libsql_experimental as libsql
 from config import DEFAULT_VISION_WEIGHTS, DEFAULT_MOTIFS
 
 
+_db: libsql.Connection | None = None
+
+
 def get_db() -> libsql.Connection:
-    return libsql.connect(
-        database=os.getenv("TURSO_DATABASE_URL"),
-        auth_token=os.getenv("TURSO_AUTH_TOKEN"),
-    )
+    global _db
+    if _db is None:
+        _db = libsql.connect(
+            database=os.getenv("TURSO_DATABASE_URL"),
+            auth_token=os.getenv("TURSO_AUTH_TOKEN"),
+        )
+    return _db
 
 
 def setup_database() -> None:
@@ -120,10 +126,15 @@ def get_server_config(guild_id: str) -> tuple | None:
 
 
 def upsert_server_config(guild_id: str, auspex_role_id: str, mod_role_id: str) -> None:
+    """Update roles without touching any other config (night length, sundown, etc.)."""
     conn = get_db()
     conn.execute(
-        "INSERT OR REPLACE INTO server_config "
-        "(guild_id, auspex_role_id, mod_role_id, is_configured) VALUES (?, ?, ?, 1)",
+        "INSERT INTO server_config (guild_id, auspex_role_id, mod_role_id, is_configured) "
+        "VALUES (?, ?, ?, 1) "
+        "ON CONFLICT (guild_id) DO UPDATE SET "
+        "auspex_role_id = excluded.auspex_role_id, "
+        "mod_role_id    = excluded.mod_role_id, "
+        "is_configured  = 1",
         (guild_id, auspex_role_id, mod_role_id),
     )
     conn.commit()
@@ -221,6 +232,24 @@ def add_motif_to_pool(guild_id: str, motif: str) -> None:
     conn.execute(
         "INSERT INTO thread_pool (guild_id, motif) VALUES (?, ?)",
         (guild_id, motif),
+    )
+    conn.commit()
+
+
+def get_thread_pool(guild_id: str) -> list[tuple[int, str]]:
+    """Return all active motifs in the pool as (id, motif) pairs, oldest first."""
+    rows = get_db().execute(
+        "SELECT id, motif FROM thread_pool WHERE guild_id = ? AND is_active = 1 ORDER BY id",
+        (guild_id,),
+    ).fetchall()
+    return [(r[0], r[1]) for r in rows]
+
+
+def remove_motif_from_pool(guild_id: str, motif_id: int) -> None:
+    conn = get_db()
+    conn.execute(
+        "DELETE FROM thread_pool WHERE guild_id = ? AND id = ?",
+        (guild_id, motif_id),
     )
     conn.commit()
 
