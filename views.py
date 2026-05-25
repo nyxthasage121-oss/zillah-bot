@@ -194,6 +194,13 @@ class LucidVisionView(discord.ui.View):
             db.save_vision(self.guild_id, self.user_id, "Lucid Vision", clean_text, self.now_iso)
 
     async def _on_choice(self, interaction: discord.Interaction, choice: str) -> None:
+        # Guard: only the player who received this vision may shape it.
+        if str(interaction.user.id) != self.user_id:
+            await interaction.response.send_message(
+                "These are not your visions to shape.", ephemeral=True
+            )
+            return
+
         # Disable all buttons immediately to prevent double-clicks.
         for item in self.children:
             item.disabled = True

@@ -6,7 +6,16 @@ import random
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+import discord
+
 from config import CLAN_FLAVOR, NIGHT_EPOCH, TIMEZONE_ALIASES
+
+
+def has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> bool:
+    """Return True if the user is a server admin or holds the designated mod role."""
+    if interaction.user.guild_permissions.administrator:
+        return True
+    return mod_role_id in [str(r.id) for r in interaction.user.roles]
 
 
 def resolve_timezone(tz_string: str) -> ZoneInfo:

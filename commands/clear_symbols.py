@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 import discord
 from discord import app_commands
 
@@ -8,11 +6,11 @@ from utils import has_mod_permission
 
 
 @app_commands.command(
-    name="reset_cooldown",
-    description="Reset a player's vision uses so they can seek visions again this night",
+    name="clear_symbols",
+    description="Clear all detected recurring symbols for a player",
 )
-@app_commands.describe(player="The player whose cooldown to reset")
-async def reset_cooldown(
+@app_commands.describe(player="The player whose symbols to clear")
+async def clear_symbols(
     interaction: discord.Interaction,
     player: discord.Member,
 ) -> None:
@@ -32,17 +30,18 @@ async def reset_cooldown(
         )
         return
 
-    now_iso = datetime.now(timezone.utc).isoformat()
-    cooldown = db.get_cooldown(guild_id, str(player.id))
+    symbols = db.get_detected_symbols(guild_id, str(player.id))
+    if not symbols:
+        await interaction.response.send_message(
+            f"**{player.display_name}** has no detected symbols to clear.",
+            ephemeral=True,
+        )
+        return
 
-    if cooldown and cooldown[0] > 0:
-        db.reset_cooldown(guild_id, str(player.id), now_iso)
-        await interaction.response.send_message(
-            f"The veil parts once more. **{player.display_name}**'s sight has been restored.",
-            ephemeral=True,
-        )
-    else:
-        await interaction.response.send_message(
-            f"**{player.display_name}** has no uses recorded this night — they're already free to seek visions.",
-            ephemeral=True,
-        )
+    count = len(symbols)
+    db.clear_detected_symbols(guild_id, str(player.id))
+    await interaction.response.send_message(
+        f"Cleared {count} symbol(s) for **{player.display_name}**. "
+        f"Their journal's symbol tab is now empty.",
+        ephemeral=True,
+    )

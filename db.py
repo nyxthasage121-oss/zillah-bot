@@ -2,8 +2,12 @@
 Database connection and all query helpers.
 
 All Discord IDs are stored as TEXT to avoid float precision loss.
+The _with_reconnect decorator gives every public function one automatic
+retry with a fresh connection on any DB error (handles stale connections,
+network blips, etc. without requiring a bot restart).
 """
 
+import functools
 import os
 import random as _random
 import libsql_experimental as libsql
@@ -14,17 +18,36 @@ from config import DEFAULT_VISION_WEIGHTS, DEFAULT_MOTIFS
 _db: libsql.Connection | None = None
 
 
+def _connect() -> libsql.Connection:
+    return libsql.connect(
+        database=os.getenv("TURSO_DATABASE_URL"),
+        auth_token=os.getenv("TURSO_AUTH_TOKEN"),
+    )
+
+
 def get_db() -> libsql.Connection:
     global _db
     if _db is None:
-        _db = libsql.connect(
-            database=os.getenv("TURSO_DATABASE_URL"),
-            auth_token=os.getenv("TURSO_AUTH_TOKEN"),
-        )
+        _db = _connect()
     return _db
 
 
+def _with_reconnect(fn):
+    """On any DB error, drop the cached connection and retry once.
+    If the second attempt also fails, the exception propagates normally."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        global _db
+        try:
+            return fn(*args, **kwargs)
+        except Exception:
+            _db = None  # force a fresh connection on next get_db()
+            return fn(*args, **kwargs)
+    return wrapper
+
+
 def setup_database() -> None:
+    """Create all tables. Called once at startup — not decorated (errors here are fatal)."""
     conn = get_db()
 
     conn.execute("""
@@ -112,6 +135,7 @@ def setup_database() -> None:
 
 # ── server_config ─────────────────────────────────────────────────────────────
 
+@_with_reconnect
 def get_server_config(guild_id: str) -> tuple | None:
     """Returns (auspex_role_id[0], mod_role_id[1], premonition_channel_id[2],
                 uses_per_night[3], is_configured[4], night_length_days[5],
@@ -125,6 +149,7 @@ def get_server_config(guild_id: str) -> tuple | None:
     ).fetchone()
 
 
+@_with_reconnect
 def upsert_server_config(guild_id: str, auspex_role_id: str, mod_role_id: str) -> None:
     """Update roles without touching any other config (night length, sundown, etc.)."""
     conn = get_db()
@@ -140,13 +165,15 @@ def upsert_server_config(guild_id: str, auspex_role_id: str, mod_role_id: str) -
     conn.commit()
 
 
+@_with_reconnect
 def init_server(guild_id: str) -> None:
-    """Creates a blank unconfigured row for a new server if one doesn't already exist."""
+    """Create a blank unconfigured row for a new server if one doesn't exist."""
     conn = get_db()
     conn.execute("INSERT OR IGNORE INTO server_config (guild_id) VALUES (?)", (guild_id,))
     conn.commit()
 
 
+@_with_reconnect
 def set_premonition_channel(guild_id: str, channel_id: str) -> None:
     conn = get_db()
     conn.execute(
@@ -156,6 +183,7 @@ def set_premonition_channel(guild_id: str, channel_id: str) -> None:
     conn.commit()
 
 
+@_with_reconnect
 def update_cooldown_config(
     guild_id: str,
     night_length_days: int | None = None,
@@ -187,6 +215,7 @@ def update_cooldown_config(
 
 # ── vision_weights ────────────────────────────────────────────────────────────
 
+@_with_reconnect
 def reset_vision_weights(guild_id: str) -> None:
     conn = get_db()
     conn.execute("DELETE FROM vision_weights WHERE guild_id = ?", (guild_id,))
@@ -198,6 +227,7 @@ def reset_vision_weights(guild_id: str) -> None:
     conn.commit()
 
 
+@_with_reconnect
 def get_vision_weights(guild_id: str) -> list[tuple[str, int]]:
     return get_db().execute(
         "SELECT vision_type, weight FROM vision_weights WHERE guild_id = ?",
@@ -205,6 +235,7 @@ def get_vision_weights(guild_id: str) -> list[tuple[str, int]]:
     ).fetchall()
 
 
+@_with_reconnect
 def update_vision_weight(guild_id: str, vision_type: str, weight: int) -> None:
     conn = get_db()
     conn.execute(
@@ -216,6 +247,27 @@ def update_vision_weight(guild_id: str, vision_type: str, weight: int) -> None:
 
 # ── thread_pool ───────────────────────────────────────────────────────────────
 
+@_with_reconnect
+def get_thread_pool(guild_id: str) -> list[tuple[int, str]]:
+    """Return all active motifs as (id, motif) pairs, oldest first."""
+    rows = get_db().execute(
+        "SELECT id, motif FROM thread_pool WHERE guild_id = ? AND is_active = 1 ORDER BY id",
+        (guild_id,),
+    ).fetchall()
+    return [(r[0], r[1]) for r in rows]
+
+
+@_with_reconnect
+def remove_motif_from_pool(guild_id: str, motif_id: int) -> None:
+    conn = get_db()
+    conn.execute(
+        "DELETE FROM thread_pool WHERE guild_id = ? AND id = ?",
+        (guild_id, motif_id),
+    )
+    conn.commit()
+
+
+@_with_reconnect
 def reset_thread_pool(guild_id: str) -> None:
     conn = get_db()
     conn.execute("DELETE FROM thread_pool WHERE guild_id = ?", (guild_id,))
@@ -227,6 +279,7 @@ def reset_thread_pool(guild_id: str) -> None:
     conn.commit()
 
 
+@_with_reconnect
 def add_motif_to_pool(guild_id: str, motif: str) -> None:
     conn = get_db()
     conn.execute(
@@ -236,24 +289,7 @@ def add_motif_to_pool(guild_id: str, motif: str) -> None:
     conn.commit()
 
 
-def get_thread_pool(guild_id: str) -> list[tuple[int, str]]:
-    """Return all active motifs in the pool as (id, motif) pairs, oldest first."""
-    rows = get_db().execute(
-        "SELECT id, motif FROM thread_pool WHERE guild_id = ? AND is_active = 1 ORDER BY id",
-        (guild_id,),
-    ).fetchall()
-    return [(r[0], r[1]) for r in rows]
-
-
-def remove_motif_from_pool(guild_id: str, motif_id: int) -> None:
-    conn = get_db()
-    conn.execute(
-        "DELETE FROM thread_pool WHERE guild_id = ? AND id = ?",
-        (guild_id, motif_id),
-    )
-    conn.commit()
-
-
+@_with_reconnect
 def get_random_motif(guild_id: str) -> str | None:
     rows = get_db().execute(
         "SELECT motif FROM thread_pool WHERE guild_id = ? AND is_active = 1",
@@ -264,6 +300,7 @@ def get_random_motif(guild_id: str) -> str | None:
 
 # ── player_cooldowns ──────────────────────────────────────────────────────────
 
+@_with_reconnect
 def get_cooldown(guild_id: str, user_id: str) -> tuple | None:
     return get_db().execute(
         "SELECT uses_this_night, last_reset_timestamp FROM player_cooldowns "
@@ -272,6 +309,7 @@ def get_cooldown(guild_id: str, user_id: str) -> tuple | None:
     ).fetchone()
 
 
+@_with_reconnect
 def reset_cooldown(guild_id: str, user_id: str, now_iso: str) -> None:
     conn = get_db()
     conn.execute(
@@ -282,6 +320,7 @@ def reset_cooldown(guild_id: str, user_id: str, now_iso: str) -> None:
     conn.commit()
 
 
+@_with_reconnect
 def increment_cooldown(guild_id: str, user_id: str, now_iso: str, exists: bool) -> None:
     conn = get_db()
     if exists:
@@ -292,7 +331,8 @@ def increment_cooldown(guild_id: str, user_id: str, now_iso: str, exists: bool) 
         )
     else:
         conn.execute(
-            "INSERT INTO player_cooldowns (guild_id, user_id, uses_this_night, last_reset_timestamp) "
+            "INSERT INTO player_cooldowns "
+            "(guild_id, user_id, uses_this_night, last_reset_timestamp) "
             "VALUES (?, ?, 1, ?)",
             (guild_id, user_id, now_iso),
         )
@@ -301,6 +341,7 @@ def increment_cooldown(guild_id: str, user_id: str, now_iso: str, exists: bool) 
 
 # ── vision_history ────────────────────────────────────────────────────────────
 
+@_with_reconnect
 def save_vision(
     guild_id: str,
     user_id: str,
@@ -319,6 +360,7 @@ def save_vision(
     conn.commit()
 
 
+@_with_reconnect
 def get_vision_history_page(
     guild_id: str, user_id: str, page: int, per_page: int
 ) -> list[dict]:
@@ -340,6 +382,7 @@ def get_vision_history_page(
     ]
 
 
+@_with_reconnect
 def count_vision_history(guild_id: str, user_id: str) -> int:
     row = get_db().execute(
         "SELECT COUNT(*) FROM vision_history WHERE guild_id = ? AND user_id = ?",
@@ -348,6 +391,7 @@ def count_vision_history(guild_id: str, user_id: str) -> int:
     return row[0] if row else 0
 
 
+@_with_reconnect
 def get_recent_visions_text(guild_id: str, user_id: str, limit: int) -> list[str]:
     rows = get_db().execute(
         "SELECT vision_text FROM vision_history WHERE guild_id = ? AND user_id = ? "
@@ -359,8 +403,9 @@ def get_recent_visions_text(guild_id: str, user_id: str, limit: int) -> list[str
 
 # ── vision_threads ────────────────────────────────────────────────────────────
 
+@_with_reconnect
 def get_active_thread(guild_id: str, user_id: str) -> dict | None:
-    """Returns the full active thread row as a dict, or None."""
+    """Return the active thread row as a dict, or None."""
     row = get_db().execute(
         "SELECT id, motif, start_timestamp, duration_nights, is_st_assigned "
         "FROM vision_threads WHERE guild_id = ? AND user_id = ? AND is_active = 1",
@@ -377,6 +422,7 @@ def get_active_thread(guild_id: str, user_id: str) -> dict | None:
     }
 
 
+@_with_reconnect
 def deactivate_thread(guild_id: str, user_id: str) -> None:
     conn = get_db()
     conn.execute(
@@ -387,6 +433,7 @@ def deactivate_thread(guild_id: str, user_id: str) -> None:
     conn.commit()
 
 
+@_with_reconnect
 def create_thread(
     guild_id: str,
     user_id: str,
@@ -405,6 +452,7 @@ def create_thread(
     conn.commit()
 
 
+@_with_reconnect
 def get_all_active_threads(guild_id: str) -> list[dict]:
     rows = get_db().execute(
         "SELECT id, user_id, motif, start_timestamp, duration_nights, is_st_assigned "
@@ -426,6 +474,7 @@ def get_all_active_threads(guild_id: str) -> list[dict]:
 
 # ── detected_symbols ──────────────────────────────────────────────────────────
 
+@_with_reconnect
 def upsert_detected_symbol(guild_id: str, user_id: str, symbol: str, now_iso: str) -> None:
     conn = get_db()
     existing = conn.execute(
@@ -448,6 +497,7 @@ def upsert_detected_symbol(guild_id: str, user_id: str, symbol: str, now_iso: st
     conn.commit()
 
 
+@_with_reconnect
 def get_detected_symbols(guild_id: str, user_id: str) -> list[dict]:
     rows = get_db().execute(
         "SELECT symbol, first_seen, last_seen, occurrence_count "
@@ -464,3 +514,14 @@ def get_detected_symbols(guild_id: str, user_id: str) -> list[dict]:
         }
         for r in rows
     ]
+
+
+@_with_reconnect
+def clear_detected_symbols(guild_id: str, user_id: str) -> None:
+    """Remove all detected symbols for a player."""
+    conn = get_db()
+    conn.execute(
+        "DELETE FROM detected_symbols WHERE guild_id = ? AND user_id = ?",
+        (guild_id, user_id),
+    )
+    conn.commit()

@@ -1,15 +1,12 @@
 import re
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import discord
 from discord import app_commands
 
 import db
-
-
-def _has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> bool:
-    if interaction.user.guild_permissions.administrator:
-        return True
-    return mod_role_id in [str(r.id) for r in interaction.user.roles]
+from config import TIMEZONE_ALIASES
+from utils import has_mod_permission
 
 
 @app_commands.command(name="set_cooldown", description="Adjust cooldown and night length settings")
@@ -17,7 +14,7 @@ def _has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> b
     night_length_days="How many days constitute one 'night' for cooldown resets",
     uses_per_night="How many times per night a player may use /premonition",
     sundown_time="Time of day cooldowns reset, in HH:MM format (e.g. 20:00)",
-    sundown_timezone="Timezone for the reset time (e.g. EST, UTC, PST)",
+    sundown_timezone="Timezone for the reset time (e.g. EST, UTC, America/Chicago)",
 )
 async def set_cooldown(
     interaction: discord.Interaction,
@@ -36,13 +33,13 @@ async def set_cooldown(
         )
         return
 
-    if not _has_mod_permission(interaction, str(config[1])):
+    if not has_mod_permission(interaction, str(config[1])):
         await interaction.response.send_message(
             "You don't have permission to use this command.", ephemeral=True
         )
         return
 
-    # Validate sundown_time format before writing to DB
+    # Validate sundown_time format
     if sundown_time is not None:
         if not re.fullmatch(r"\d{1,2}:\d{2}", sundown_time):
             await interaction.response.send_message(
@@ -59,6 +56,20 @@ async def set_cooldown(
             )
             return
 
+    # Validate sundown_timezone
+    if sundown_timezone is not None:
+        normalized = sundown_timezone.strip().upper()
+        if normalized not in TIMEZONE_ALIASES:
+            try:
+                ZoneInfo(sundown_timezone.strip())
+            except (ZoneInfoNotFoundError, KeyError):
+                await interaction.response.send_message(
+                    f"Unrecognised timezone `{sundown_timezone}`. "
+                    f"Use a common abbreviation (EST, PST, UTC) or a full IANA name (America/Chicago).",
+                    ephemeral=True,
+                )
+                return
+
     if all(v is None for v in (night_length_days, uses_per_night, sundown_time, sundown_timezone)):
         await interaction.response.send_message(
             "Provide at least one setting to update.", ephemeral=True
@@ -73,7 +84,6 @@ async def set_cooldown(
         sundown_timezone=sundown_timezone,
     )
 
-    # Confirm with the current settings.
     updated = db.get_server_config(guild_id)
     lines = [
         f"Night length: **{updated[5]} days**",

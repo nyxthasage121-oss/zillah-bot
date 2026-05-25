@@ -3,12 +3,7 @@ from discord import app_commands
 
 import db
 from config import VISION_EMBED_COLOR
-
-
-def _has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> bool:
-    if interaction.user.guild_permissions.administrator:
-        return True
-    return mod_role_id in [str(r.id) for r in interaction.user.roles]
+from utils import has_mod_permission
 
 
 @app_commands.command(
@@ -26,7 +21,7 @@ async def reset_weights(interaction: discord.Interaction) -> None:
         )
         return
 
-    if not _has_mod_permission(interaction, str(config[1])):
+    if not has_mod_permission(interaction, str(config[1])):
         await interaction.response.send_message(
             "You don't have permission to use this command.", ephemeral=True
         )

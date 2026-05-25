@@ -2,13 +2,8 @@ import discord
 from discord import app_commands
 
 import db
+from utils import has_mod_permission
 from views import VisionHistoryView
-
-
-def _has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> bool:
-    if interaction.user.guild_permissions.administrator:
-        return True
-    return mod_role_id in [str(r.id) for r in interaction.user.roles]
 
 
 @app_commands.command(name="vision_log", description="Look up a player's vision history")
@@ -24,7 +19,7 @@ async def vision_log(interaction: discord.Interaction, player: discord.Member) -
         )
         return
 
-    if not _has_mod_permission(interaction, str(config[1])):
+    if not has_mod_permission(interaction, str(config[1])):
         await interaction.response.send_message(
             "You don't have permission to use this command.", ephemeral=True
         )

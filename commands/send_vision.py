@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import random
 from datetime import datetime, timezone
 from typing import Literal, Union
 
@@ -10,22 +11,21 @@ import clients
 import db
 from commands.premonition import build_vision_prompt
 from config import CLAUDE_MODEL, ST_EMBED_COLOR, VISION_ALL_TYPES
-from utils import get_clan_flavor
-
-
-def _has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> bool:
-    if interaction.user.guild_permissions.administrator:
-        return True
-    return mod_role_id in [str(r.id) for r in interaction.user.roles]
+from utils import get_clan_flavor, has_mod_permission
 
 
 VisionTypeOrRandom = Literal[
-    "Random", "Standard Vision", "Lucid Vision", "Glitch Vision", "Echo Vision",
+    "Random", "Standard Vision", "Glitch Vision", "Echo Vision",
     "Resonance Bleed", "Nightmare Bleed", "The Witness", "The Warning",
     "Retrocognition Surge",
 ]
+# Note: "Lucid Vision" is intentionally excluded — it requires interactive buttons
+# that can't be replicated in an ST send. Use "Random" to pick from all non-Lucid types.
 
 VisionSource = Literal["AI Generated", "ST Written", "ST Prompted"]
+
+# Types available for random selection — excludes Lucid Vision (interactive only)
+_ST_VISION_TYPES = [t for t in VISION_ALL_TYPES if t != "Lucid Vision"]
 
 
 async def _generate_vision(vision_type: str, source: str, custom_text: str | None) -> str:
@@ -79,7 +79,7 @@ async def send_vision(
         )
         return
 
-    if not _has_mod_permission(interaction, str(config[1])):
+    if not has_mod_permission(interaction, str(config[1])):
         await interaction.response.send_message(
             "You don't have permission to use this command.", ephemeral=True
         )
@@ -121,13 +121,12 @@ async def send_vision(
 
     await interaction.response.defer(ephemeral=True)
 
-    import random
     now = datetime.now(timezone.utc)
     sent = 0
     errors = 0
 
     for player in players:
-        chosen_type = random.choice(VISION_ALL_TYPES) if vision_type == "Random" else vision_type
+        chosen_type = random.choice(_ST_VISION_TYPES) if vision_type == "Random" else vision_type
 
         try:
             vision_text = await _generate_vision(chosen_type, source, custom_text)

@@ -20,6 +20,9 @@ from commands.reset_weights import reset_weights
 from commands.settings import settings
 from commands.my_visions import my_visions
 from commands.my_journal import my_journal
+from commands.end_thread import end_thread
+from commands.clear_symbols import clear_symbols
+from commands.help import zillah_help
 
 
 def register_all(tree: app_commands.CommandTree) -> None:
@@ -39,3 +42,6 @@ def register_all(tree: app_commands.CommandTree) -> None:
     tree.add_command(settings)
     tree.add_command(my_visions)
     tree.add_command(my_journal)
+    tree.add_command(end_thread)
+    tree.add_command(clear_symbols)
+    tree.add_command(zillah_help)

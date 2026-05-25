@@ -5,18 +5,13 @@ from discord import app_commands
 
 import db
 from config import VISION_EMBED_COLOR
+from utils import has_mod_permission
 
 VisionTypeChoice = Literal[
     "Standard Vision", "Lucid Vision", "Glitch Vision", "Echo Vision",
     "Resonance Bleed", "Nightmare Bleed", "The Witness", "The Warning",
     "Retrocognition Surge",
 ]
-
-
-def _has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> bool:
-    if interaction.user.guild_permissions.administrator:
-        return True
-    return mod_role_id in [str(r.id) for r in interaction.user.roles]
 
 
 @app_commands.command(name="set_weights", description="Adjust vision type probability weights")
@@ -39,7 +34,7 @@ async def set_weights(
         )
         return
 
-    if not _has_mod_permission(interaction, str(config[1])):
+    if not has_mod_permission(interaction, str(config[1])):
         await interaction.response.send_message(
             "You don't have permission to use this command.", ephemeral=True
         )

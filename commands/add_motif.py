@@ -2,12 +2,7 @@ import discord
 from discord import app_commands
 
 import db
-
-
-def _has_mod_permission(interaction: discord.Interaction, mod_role_id: str) -> bool:
-    if interaction.user.guild_permissions.administrator:
-        return True
-    return mod_role_id in [str(r.id) for r in interaction.user.roles]
+from utils import has_mod_permission
 
 
 @app_commands.command(name="add_motif", description="Add a custom motif to this server's thread pool")
@@ -23,7 +18,7 @@ async def add_motif(interaction: discord.Interaction, motif: str) -> None:
         )
         return
 
-    if not _has_mod_permission(interaction, str(config[1])):
+    if not has_mod_permission(interaction, str(config[1])):
         await interaction.response.send_message(
             "You don't have permission to use this command.", ephemeral=True
         )

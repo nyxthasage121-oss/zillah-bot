@@ -30,7 +30,8 @@ async def setup(
         f"Zillah is configured.\n"
         f"Auspex role: {auspex_role.mention}\n"
         f"Mod role: {mod_role.mention}\n"
-        f"Default vision weights and thread pool are ready.\n"
+        f"⚠️ Vision weights and the thread pool have been reset to defaults.\n"
+        f"Night cycle and sundown settings were preserved.\n"
         f"Use /set_channel to designate the premonition channel.",
         ephemeral=True,
     )

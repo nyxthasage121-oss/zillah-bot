@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 import discord
 from discord import app_commands
 
@@ -7,12 +5,9 @@ import db
 from utils import has_mod_permission
 
 
-@app_commands.command(
-    name="reset_cooldown",
-    description="Reset a player's vision uses so they can seek visions again this night",
-)
-@app_commands.describe(player="The player whose cooldown to reset")
-async def reset_cooldown(
+@app_commands.command(name="end_thread", description="Close a player's active vision thread early")
+@app_commands.describe(player="The player whose thread to close")
+async def end_thread(
     interaction: discord.Interaction,
     player: discord.Member,
 ) -> None:
@@ -32,17 +27,18 @@ async def reset_cooldown(
         )
         return
 
-    now_iso = datetime.now(timezone.utc).isoformat()
-    cooldown = db.get_cooldown(guild_id, str(player.id))
+    thread = db.get_active_thread(guild_id, str(player.id))
+    if not thread:
+        await interaction.response.send_message(
+            f"**{player.display_name}** has no active vision thread.",
+            ephemeral=True,
+        )
+        return
 
-    if cooldown and cooldown[0] > 0:
-        db.reset_cooldown(guild_id, str(player.id), now_iso)
-        await interaction.response.send_message(
-            f"The veil parts once more. **{player.display_name}**'s sight has been restored.",
-            ephemeral=True,
-        )
-    else:
-        await interaction.response.send_message(
-            f"**{player.display_name}** has no uses recorded this night — they're already free to seek visions.",
-            ephemeral=True,
-        )
+    db.deactivate_thread(guild_id, str(player.id))
+    source = "ST-assigned" if thread["is_st_assigned"] else "auto-triggered"
+    await interaction.response.send_message(
+        f"Thread closed for **{player.display_name}**.\n"
+        f"The {source} motif *{thread['motif']}* will no longer appear in their visions.",
+        ephemeral=True,
+    )
