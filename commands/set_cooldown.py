@@ -9,7 +9,7 @@ from config import TIMEZONE_ALIASES
 from utils import has_mod_permission
 
 
-@app_commands.command(name="set_cooldown", description="Adjust cooldown and night length settings")
+@app_commands.command(name="cooldown", description="Adjust cooldown and night length settings")
 @app_commands.describe(
     night_length_days="How many days constitute one 'night' for cooldown resets",
     uses_per_night="How many times per night a player may use /premonition",

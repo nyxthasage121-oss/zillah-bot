@@ -19,8 +19,8 @@ async def zillah_help(interaction: discord.Interaction) -> None:
         name="For players with Auspex",
         value=(
             "`/premonition` — Seek a vision. Works in the designated channel.\n"
-            "`/my_visions` — Browse your full vision history.\n"
-            "`/my_journal` — Two-tab journal: visions and recurring symbols side by side."
+            "`/myvisions` — Browse your full vision history.\n"
+            "`/myjournal` — Two-tab journal: visions and recurring symbols side by side."
         ),
         inline=False,
     )

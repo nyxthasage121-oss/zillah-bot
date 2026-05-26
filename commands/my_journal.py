@@ -5,7 +5,7 @@ import db
 from views import JournalView
 
 
-@app_commands.command(name="my_journal", description="Open your full journal — visions and recurring symbols")
+@app_commands.command(name="myjournal", description="Open your full journal — visions and recurring symbols")
 async def my_journal(interaction: discord.Interaction) -> None:
     guild_id = str(interaction.guild_id)
     config = db.get_server_config(guild_id)

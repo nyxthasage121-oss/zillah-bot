@@ -8,12 +8,14 @@ network blips, etc. without requiring a bot restart).
 """
 
 import functools
+import logging
 import os
 import random as _random
 import libsql_experimental as libsql
 
 from config import DEFAULT_VISION_WEIGHTS, DEFAULT_MOTIFS
 
+logger = logging.getLogger("zillah.db")
 
 _db: libsql.Connection | None = None
 
@@ -130,7 +132,7 @@ def setup_database() -> None:
     """)
 
     conn.commit()
-    print("Database ready.")
+    logger.info("Database ready.")
 
 
 # ── server_config ─────────────────────────────────────────────────────────────

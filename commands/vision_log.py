@@ -6,7 +6,7 @@ from utils import has_mod_permission
 from views import VisionHistoryView
 
 
-@app_commands.command(name="vision_log", description="Look up a player's vision history")
+@app_commands.command(name="log", description="Look up a player's vision history")
 @app_commands.describe(player="The player whose vision history to view")
 async def vision_log(interaction: discord.Interaction, player: discord.Member) -> None:
     guild_id = str(interaction.guild_id)

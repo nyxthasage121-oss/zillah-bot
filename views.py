@@ -8,10 +8,13 @@ by commands/premonition.py so they run for both regular and Lucid visions.
 import asyncio
 import functools
 import json
+import logging
 import random
 from datetime import datetime, timezone
 
 import discord
+
+logger = logging.getLogger("zillah.views")
 
 import clients
 import db
@@ -62,7 +65,7 @@ async def _run_symbol_detection(guild_id: str, user_id: str) -> None:
             if isinstance(symbol, str) and symbol.strip():
                 db.upsert_detected_symbol(guild_id, user_id, symbol.strip().lower(), now_iso)
     except Exception as e:
-        print(f"Symbol detection error (non-fatal): {e}")
+        logger.warning("Symbol detection error (non-fatal): %s", e)
 
 
 async def _try_auto_thread(
@@ -105,7 +108,7 @@ async def _try_auto_thread(
             except Exception:
                 pass
     except Exception as e:
-        print(f"Auto-thread trigger error (non-fatal): {e}")
+        logger.warning("Auto-thread trigger error (non-fatal): %s", e)
 
 
 # ── Lucid Vision helpers ──────────────────────────────────────────────────────
@@ -212,7 +215,7 @@ class LucidVisionView(discord.ui.View):
         try:
             data = await _call_lucid(self.accumulated, choice, is_final, self.active_motif)
         except Exception as e:
-            print(f"Lucid Vision continuation error: {e}")
+            logger.error("Lucid Vision continuation error: %s", e, exc_info=True)
             await interaction.followup.send(
                 "The vision fractures. The thread is lost.", ephemeral=True
             )
@@ -301,7 +304,7 @@ class ConfirmOverwriteView(discord.ui.View):
 # ── VisionHistoryView ─────────────────────────────────────────────────────────
 
 class VisionHistoryView(discord.ui.View):
-    """Paginated vision history for /my_visions and /vision_log."""
+    """Paginated vision history for /myvisions and /vision log."""
 
     PER_PAGE = 10
 
@@ -311,6 +314,7 @@ class VisionHistoryView(discord.ui.View):
         self.user_id = user_id
         self.title = title
         self.page = 0
+        self._page_visions: list[dict] = []
         self._refresh_buttons()
 
     def _max_page(self) -> int:
@@ -321,16 +325,46 @@ class VisionHistoryView(discord.ui.View):
         self.prev_btn.disabled = self.page == 0
         self.next_btn.disabled = self.page >= self._max_page()
 
+    def _rebuild_select(self) -> None:
+        for item in list(self.children):
+            if isinstance(item, discord.ui.Select):
+                self.remove_item(item)
+        if not self._page_visions:
+            return
+        options = [
+            discord.SelectOption(
+                label=f"{v['vision_type']} · {datetime.fromisoformat(v['timestamp']).strftime('%b %d')}"[:100],
+                value=str(i),
+            )
+            for i, v in enumerate(self._page_visions)
+        ]
+        select = discord.ui.Select(placeholder="Read a vision in full…", options=options)
+        select.callback = self._on_vision_select
+        self.add_item(select)
+
+    async def _on_vision_select(self, interaction: discord.Interaction) -> None:
+        idx = int(interaction.data["values"][0])
+        v = self._page_visions[idx]
+        ts = datetime.fromisoformat(v["timestamp"]).strftime("%b %d, %Y")
+        tag = " · ST Sent" if v["is_st_triggered"] else ""
+        embed = discord.Embed(
+            title=f"{v['vision_type']}{tag} · {ts}",
+            description=f"*{v['vision_text']}*",
+            color=VISION_EMBED_COLOR,
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
     def build_embed(self) -> discord.Embed:
-        visions = db.get_vision_history_page(
+        self._page_visions = db.get_vision_history_page(
             self.guild_id, self.user_id, self.page, self.PER_PAGE
         )
+        self._rebuild_select()
         embed = discord.Embed(title=self.title, color=VISION_EMBED_COLOR)
-        if not visions:
+        if not self._page_visions:
             embed.description = "No visions recorded yet."
         else:
             lines = []
-            for v in visions:
+            for v in self._page_visions:
                 ts = datetime.fromisoformat(v["timestamp"]).strftime("%b %d, %Y")
                 tag = " *(ST)*" if v["is_st_triggered"] else ""
                 preview = v["vision_text"][:140]
@@ -341,7 +375,7 @@ class VisionHistoryView(discord.ui.View):
         embed.set_footer(text=f"Page {self.page + 1} of {self._max_page() + 1}")
         return embed
 
-    @discord.ui.button(label="← Previous", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="← Previous", style=discord.ButtonStyle.secondary, row=0)
     async def prev_btn(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -349,7 +383,7 @@ class VisionHistoryView(discord.ui.View):
         self._refresh_buttons()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
-    @discord.ui.button(label="Next →", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Next →", style=discord.ButtonStyle.secondary, row=0)
     async def next_btn(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -371,6 +405,7 @@ class JournalView(discord.ui.View):
         self.user_id = user_id
         self.current_tab = "visions"
         self.visions_page = 0
+        self._visions_page_data: list[dict] = []
         self._refresh_buttons()
 
     def _max_page(self) -> int:
@@ -392,19 +427,51 @@ class JournalView(discord.ui.View):
         self.prev_btn.disabled = not on_visions or self.visions_page == 0
         self.next_btn.disabled = not on_visions or self.visions_page >= self._max_page()
 
+    def _rebuild_select(self) -> None:
+        for item in list(self.children):
+            if isinstance(item, discord.ui.Select):
+                self.remove_item(item)
+        if self.current_tab != "visions" or not self._visions_page_data:
+            return
+        options = [
+            discord.SelectOption(
+                label=f"{v['vision_type']} · {datetime.fromisoformat(v['timestamp']).strftime('%b %d')}"[:100],
+                value=str(i),
+            )
+            for i, v in enumerate(self._visions_page_data)
+        ]
+        select = discord.ui.Select(
+            placeholder="Read a vision in full…", options=options, row=2
+        )
+        select.callback = self._on_vision_select
+        self.add_item(select)
+
+    async def _on_vision_select(self, interaction: discord.Interaction) -> None:
+        idx = int(interaction.data["values"][0])
+        v = self._visions_page_data[idx]
+        ts = datetime.fromisoformat(v["timestamp"]).strftime("%b %d, %Y")
+        tag = " · ST Sent" if v["is_st_triggered"] else ""
+        embed = discord.Embed(
+            title=f"{v['vision_type']}{tag} · {ts}",
+            description=f"*{v['vision_text']}*",
+            color=VISION_EMBED_COLOR,
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
     def build_embed(self) -> discord.Embed:
         return self._visions_embed() if self.current_tab == "visions" else self._symbols_embed()
 
     def _visions_embed(self) -> discord.Embed:
-        visions = db.get_vision_history_page(
+        self._visions_page_data = db.get_vision_history_page(
             self.guild_id, self.user_id, self.visions_page, self.PER_PAGE
         )
+        self._rebuild_select()
         embed = discord.Embed(title="📖 Your Journal — Visions", color=VISION_EMBED_COLOR)
-        if not visions:
+        if not self._visions_page_data:
             embed.description = "No visions recorded yet."
         else:
             lines = []
-            for v in visions:
+            for v in self._visions_page_data:
                 ts = datetime.fromisoformat(v["timestamp"]).strftime("%b %d")
                 tag = " *(ST)*" if v["is_st_triggered"] else ""
                 preview = v["vision_text"][:120]
@@ -418,6 +485,7 @@ class JournalView(discord.ui.View):
         return embed
 
     def _symbols_embed(self) -> discord.Embed:
+        self._rebuild_select()  # clears the select when on the symbols tab
         symbols = db.get_detected_symbols(self.guild_id, self.user_id)
         embed = discord.Embed(title="🔍 Your Journal — Recurring Symbols", color=VISION_EMBED_COLOR)
         if not symbols:

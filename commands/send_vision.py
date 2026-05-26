@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import logging
 import random
 from datetime import datetime, timezone
 from typing import Literal, Union
@@ -12,6 +13,9 @@ import db
 from commands.premonition import build_vision_prompt
 from config import CLAUDE_MODEL, ST_EMBED_COLOR, VISION_ALL_TYPES
 from utils import get_clan_flavor, has_mod_permission
+from views import _run_symbol_detection
+
+logger = logging.getLogger("zillah.commands.send_vision")
 
 
 VisionTypeOrRandom = Literal[
@@ -55,7 +59,7 @@ async def _generate_vision(vision_type: str, source: str, custom_text: str | Non
     return response.content[0].text
 
 
-@app_commands.command(name="send_vision", description="Send a vision to a player or role")
+@app_commands.command(name="send", description="Send a vision to a player or role")
 @app_commands.describe(
     target="The player or role to receive the vision",
     vision_type="Vision type (or Random for weighted selection)",
@@ -131,7 +135,7 @@ async def send_vision(
         try:
             vision_text = await _generate_vision(chosen_type, source, custom_text)
         except Exception as e:
-            print(f"send_vision generation error for {player.id}: {e}")
+            logger.error("send_vision generation error for %s: %s", player.id, e, exc_info=True)
             errors += 1
             continue
 
@@ -144,7 +148,7 @@ async def send_vision(
         try:
             await post_channel.send(embed=embed)
         except Exception as e:
-            print(f"send_vision post error for {player.id}: {e}")
+            logger.error("send_vision post error for %s: %s", player.id, e, exc_info=True)
             errors += 1
             continue
 
@@ -152,6 +156,7 @@ async def send_vision(
             guild_id, str(player.id), chosen_type, vision_text, now.isoformat(),
             is_st_triggered=True,
         )
+        asyncio.create_task(_run_symbol_detection(guild_id, str(player.id)))
         sent += 1
 
     summary = f"Vision(s) sent: {sent}"

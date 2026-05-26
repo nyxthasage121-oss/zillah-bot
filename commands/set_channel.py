@@ -4,7 +4,7 @@ from discord import app_commands
 import db
 
 
-@app_commands.command(name="set_channel", description="Set the channel where /premonition is active")
+@app_commands.command(name="channel", description="Set the channel where /premonition is active")
 @app_commands.describe(channel="The channel where players will use /premonition")
 async def set_channel(
     interaction: discord.Interaction,

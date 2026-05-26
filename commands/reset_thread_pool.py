@@ -3,14 +3,16 @@ from discord import app_commands
 
 import db
 from utils import has_mod_permission
-from views import ThreadPoolView
 
 
-@app_commands.command(name="pool", description="View and manage the vision thread pool")
-async def thread_pool(interaction: discord.Interaction) -> None:
+@app_commands.command(
+    name="resetpool",
+    description="Reset the vision thread pool to its default motifs (removes all custom entries)",
+)
+async def reset_thread_pool(interaction: discord.Interaction) -> None:
     guild_id = str(interaction.guild_id)
-    config = db.get_server_config(guild_id)
 
+    config = db.get_server_config(guild_id)
     if not config or config[4] == 0:
         await interaction.response.send_message(
             "Zillah hasn't been configured yet. An administrator needs to run /setup first.",
@@ -24,8 +26,10 @@ async def thread_pool(interaction: discord.Interaction) -> None:
         )
         return
 
-    pool = db.get_thread_pool(guild_id)
-    view = ThreadPoolView(guild_id, pool)
+    db.reset_thread_pool(guild_id)
+
     await interaction.response.send_message(
-        embed=ThreadPoolView.build_embed(pool), view=view, ephemeral=True
+        "The thread pool has been reset to its default motifs. "
+        "Use `/add_motif` to add custom entries, or `/thread_pool` to review.",
+        ephemeral=True,
     )

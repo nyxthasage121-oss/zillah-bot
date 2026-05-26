@@ -8,7 +8,7 @@ from utils import has_mod_permission
 from views import ConfirmOverwriteView
 
 
-@app_commands.command(name="assign_thread", description="Assign a vision thread to a player")
+@app_commands.command(name="assign", description="Assign a vision thread to a player")
 @app_commands.describe(
     player="The player to receive the thread",
     motif="The recurring motif to weave into their visions",

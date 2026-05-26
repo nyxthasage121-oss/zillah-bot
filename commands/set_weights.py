@@ -14,7 +14,7 @@ VisionTypeChoice = Literal[
 ]
 
 
-@app_commands.command(name="set_weights", description="Adjust vision type probability weights")
+@app_commands.command(name="weights", description="Adjust vision type probability weights")
 @app_commands.describe(
     vision_type="The vision type to adjust",
     weight="New weight (0 disables the type entirely, higher = more common)",

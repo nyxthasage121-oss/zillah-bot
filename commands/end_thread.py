@@ -5,7 +5,7 @@ import db
 from utils import has_mod_permission
 
 
-@app_commands.command(name="end_thread", description="Close a player's active vision thread early")
+@app_commands.command(name="end", description="Close a player's active vision thread early")
 @app_commands.describe(player="The player whose thread to close")
 async def end_thread(
     interaction: discord.Interaction,

@@ -7,7 +7,7 @@ from utils import has_mod_permission
 
 
 @app_commands.command(
-    name="reset_weights",
+    name="resetweights",
     description="Reset all vision type weights back to their defaults",
 )
 async def reset_weights(interaction: discord.Interaction) -> None:

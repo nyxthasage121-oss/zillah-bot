@@ -5,7 +5,7 @@ import db
 from utils import has_mod_permission
 
 
-@app_commands.command(name="add_motif", description="Add a custom motif to this server's thread pool")
+@app_commands.command(name="add", description="Add a custom motif to this server's thread pool")
 @app_commands.describe(motif="The recurring image or sensation to add to the pool")
 async def add_motif(interaction: discord.Interaction, motif: str) -> None:
     guild_id = str(interaction.guild_id)

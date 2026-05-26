@@ -1,11 +1,14 @@
 import asyncio
 import functools
 import json
+import logging
 import random
 from datetime import datetime, timedelta, timezone
 
 import discord
 from discord import app_commands
+
+logger = logging.getLogger("zillah.commands.premonition")
 
 import clients
 import db
@@ -84,7 +87,7 @@ async def _handle_lucid_vision(
         fragment = data["fragment"]
         choices = data.get("choices", [])[:3]
     except Exception as e:
-        print(f"Lucid Vision initial error: {e}")
+        logger.error("Lucid Vision initial error: %s", e, exc_info=True)
         await interaction.followup.send(
             "The veil trembles but does not part. Try again in a moment.", ephemeral=True
         )
@@ -140,8 +143,10 @@ async def premonition(interaction: discord.Interaction) -> None:
 
     # ── 2. Correct channel? ───────────────────────────────────────────────
     if premonition_channel_id and str(interaction.channel_id) != str(premonition_channel_id):
+        channel = interaction.guild.get_channel(int(premonition_channel_id))
+        channel_ref = channel.mention if channel else "the designated channel"
         await interaction.response.send_message(
-            "Visions can only be sought in the designated channel.", ephemeral=True
+            f"Visions can only be sought in {channel_ref}.", ephemeral=True
         )
         return
 
@@ -225,7 +230,7 @@ async def premonition(interaction: discord.Interaction) -> None:
         )
         vision_text = response.content[0].text
     except Exception as e:
-        print(f"Anthropic API error: {e}")
+        logger.error("Anthropic API error in /premonition: %s", e, exc_info=True)
         await interaction.followup.send(
             "The veil trembles but does not part. Try again in a moment.", ephemeral=True
         )

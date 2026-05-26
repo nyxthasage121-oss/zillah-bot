@@ -65,14 +65,14 @@ async def settings(interaction: discord.Interaction) -> None:
             lines.append(f"{vt}: **{pct}**")
         remainder = len(weights) - len(top)
         if remainder:
-            lines.append(f"*+ {remainder} more — see /set_weights*")
+            lines.append(f"*+ {remainder} more — see /vision weights*")
         embed.add_field(name="Vision Weights (top)", value="\n".join(lines), inline=False)
 
     # Thread pool size
     pool = db.get_thread_pool(guild_id)
     embed.add_field(
         name="Thread Pool",
-        value=f"**{len(pool)}** motif(s) available — see /thread_pool",
+        value=f"**{len(pool)}** motif(s) available — see /thread pool",
         inline=False,
     )
 

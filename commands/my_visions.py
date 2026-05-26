@@ -5,7 +5,7 @@ import db
 from views import VisionHistoryView
 
 
-@app_commands.command(name="my_visions", description="View your vision history for this server")
+@app_commands.command(name="myvisions", description="View your vision history for this server")
 async def my_visions(interaction: discord.Interaction) -> None:
     guild_id = str(interaction.guild_id)
     config = db.get_server_config(guild_id)

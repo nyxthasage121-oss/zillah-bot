@@ -8,7 +8,7 @@ from utils import has_mod_permission
 
 
 @app_commands.command(
-    name="reset_cooldown",
+    name="resetcooldown",
     description="Reset a player's vision uses so they can seek visions again this night",
 )
 @app_commands.describe(player="The player whose cooldown to reset")

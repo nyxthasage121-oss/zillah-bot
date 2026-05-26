@@ -6,7 +6,7 @@ from config import VISION_EMBED_COLOR
 from utils import get_elapsed_nights, has_mod_permission
 
 
-@app_commands.command(name="thread_status", description="List all active vision threads for this server")
+@app_commands.command(name="status", description="List all active vision threads for this server")
 async def thread_status(interaction: discord.Interaction) -> None:
     guild_id = str(interaction.guild_id)
     config = db.get_server_config(guild_id)

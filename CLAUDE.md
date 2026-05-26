@@ -117,15 +117,18 @@ Set in Railway dashboard for production. Local `.env` file for development.
 
 ---
 
-## All slash commands (20 total)
+## All slash commands (21 total)
 
-**Player commands:**
-`/premonition`, `/my_visions`, `/my_journal`, `/help`
+**Player commands (top-level):**
+`/premonition`, `/myvisions`, `/myjournal`, `/help`
 
-**ST / mod commands:**
-`/setup`, `/set_channel`, `/set_cooldown`, `/reset_cooldown`, `/set_weights`,
-`/reset_weights`, `/send_vision`, `/vision_log`, `/assign_thread`, `/end_thread`,
-`/thread_status`, `/thread_pool`, `/add_motif`, `/settings`, `/clear_symbols`
+**ST commands (top-level):**
+`/setup`, `/settings`
+
+**ST command groups:**
+- `/thread` — `assign`, `status`, `end`, `pool`, `add`, `resetpool`
+- `/vision` — `send`, `log`, `weights`, `resetweights`
+- `/config` — `channel`, `cooldown`, `resetcooldown`, `clearsymbols`
 
 ---
 

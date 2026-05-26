@@ -6,7 +6,7 @@ from utils import has_mod_permission
 
 
 @app_commands.command(
-    name="clear_symbols",
+    name="clearsymbols",
     description="Clear all detected recurring symbols for a player",
 )
 @app_commands.describe(player="The player whose symbols to clear")
