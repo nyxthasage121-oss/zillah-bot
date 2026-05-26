@@ -117,10 +117,10 @@ Set in Railway dashboard for production. Local `.env` file for development.
 
 ---
 
-## All slash commands (21 total)
+## All slash commands (22 total)
 
 **Player commands (top-level):**
-`/premonition`, `/myvisions`, `/myjournal`, `/help`
+`/premonition`, `/myvisions`, `/myjournal`, `/help`, `/visionmenu`
 
 **ST commands (top-level):**
 `/setup`, `/settings`

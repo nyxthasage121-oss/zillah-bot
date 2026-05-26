@@ -13,6 +13,7 @@ from commands.premonition import premonition
 from commands.my_visions import my_visions
 from commands.my_journal import my_journal
 from commands.help import zillah_help
+from commands.vision_menu import visionmenu
 
 # ── ST top-level ──────────────────────────────────────────────────────────────
 from commands.setup import setup
@@ -46,6 +47,7 @@ def register_all(tree: app_commands.CommandTree) -> None:
     tree.add_command(my_visions)
     tree.add_command(my_journal)
     tree.add_command(zillah_help)
+    tree.add_command(visionmenu)
 
     # ── ST top-level ──────────────────────────────────────────────────────────
     tree.add_command(setup)

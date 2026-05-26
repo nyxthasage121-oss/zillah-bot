@@ -117,8 +117,8 @@ async def _handle_lucid_vision(
     await interaction.followup.send(embed=embed, view=view)
 
 
-@app_commands.command(name="premonition", description="Receive a vision from beyond the veil")
-async def premonition(interaction: discord.Interaction) -> None:
+async def run_premonition(interaction: discord.Interaction) -> None:
+    """Core premonition logic — called by /premonition and the /visionmenu Seek a Vision button."""
     guild_id = str(interaction.guild_id)
     user_id = str(interaction.user.id)
 
@@ -251,3 +251,8 @@ async def premonition(interaction: discord.Interaction) -> None:
     asyncio.create_task(_run_symbol_detection(guild_id, user_id))
     if not active_motif:
         asyncio.create_task(_try_auto_thread(interaction, guild_id, user_id))
+
+
+@app_commands.command(name="premonition", description="Receive a vision from beyond the veil")
+async def premonition(interaction: discord.Interaction) -> None:
+    await run_premonition(interaction)
