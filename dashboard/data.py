@@ -1,18 +1,15 @@
-"""Mock data layer.
+"""Data layer for the dashboard.
 
-Step 3 of the dashboard build replaces these stubs with real reads against
-db.py (vision_history, vision_threads, detected_symbols, etc.). Keeping the
-shape stable here lets the templates be written and reviewed first.
-
-Schema notes:
-  - Discord IDs are TEXT (see CLAUDE.md). Mock IDs follow that pattern.
-  - Stat fields like Hunger / Humanity / Blood Potency / clan don't live in
-    the bot's DB today. Step 3 decides whether to persist them or just
-    surface a free-form character_sheet TEXT column per player.
+The kindred roster is still mocked — it needs Discord API user lookups +
+character-sheet storage (not yet built). Drafts come from the real
+vision_drafts table via db.py; everything else on the editor page (recent
+visions, threads, symbols) is mocked until a future pass wires them.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+
+import db
 
 
 @dataclass
@@ -54,7 +51,7 @@ class Symbol:
 
 @dataclass
 class Draft:
-    id: str
+    id: str       # str so the same shape works for both DB ints and mock string ids
     type: str
     body: str
     when: str
@@ -107,10 +104,20 @@ def list_kindred(guild_id: str) -> list[Kindred]:
     return list(_MOCK_ROSTER)
 
 
+def _real_drafts(guild_id: str, user_id: str) -> list[Draft]:
+    """Pull this player's drafts out of the real vision_drafts table."""
+    rows = db.list_drafts_for_player(guild_id, user_id)
+    return [
+        Draft(id=str(r["id"]), type=r["vision_type"], body=r["body"], when=r["updated_at"])
+        for r in rows
+    ]
+
+
 def get_kindred(guild_id: str, user_id: str) -> KindredDetail | None:
     base = next((k for k in _MOCK_ROSTER if k.user_id == user_id), None)
     if not base:
         return None
+    real_drafts = _real_drafts(guild_id, user_id)
     if user_id == "100000000000000001":
         return KindredDetail(
             base=base,
@@ -138,11 +145,7 @@ def get_kindred(guild_id: str, user_id: str) -> KindredDetail | None:
                 Vision("The Warning", "8 nights past",
                        "Do not return to the gallery on Calle Aviles. The painting you admire there has begun, lately, to admire you back."),
             ],
-            drafts=[
-                Draft("d1", "Resonance Bleed", "The mirror behind the bar has, all evening, refused your reflection. You thought yourself amused by it. Now, as the last mortal patron rises to leave, you catch what fills your absence there: a woman in white, seated where you sit, raising your glass to lips you cannot see. She drinks. The wine within your real glass lowers, exactly the measure she has taken.", "moments ago"),
-                Draft("d2", "The Witness", "Someone has been counting your nights. You feel it in the way the doorman at the Pavilion no longer asks your name, and in how the new girl at the coat-check knows that you do not give up your coat.", "1 night past"),
-                Draft("d3", "Echo Vision", "The violinist at the Belmont plays a melody you remember from a salon in Florence, the year before your Embrace. You have not heard the piece since.", "4 nights past"),
-            ],
+            drafts=real_drafts,
         )
     # generic detail for the other roster entries
     return KindredDetail(
@@ -154,7 +157,7 @@ def get_kindred(guild_id: str, user_id: str) -> KindredDetail | None:
         threads=[],
         symbols=[],
         recent_visions=[],
-        drafts=[],
+        drafts=real_drafts,
     )
 
 

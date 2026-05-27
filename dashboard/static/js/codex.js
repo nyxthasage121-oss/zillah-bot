@@ -2,6 +2,16 @@
 // Defines the toast store, the combobox component, and the editor component.
 // All page-level interactivity goes through Alpine; HTMX handles server roundtrips.
 
+// HTMX → toast: any response with an X-Codex-Toast header surfaces that
+// message via the Alpine toast store. Keeps the wire format trivial — no
+// JSON body required for save/delete/inflict round-trips.
+document.addEventListener('htmx:afterRequest', (e) => {
+  const msg = e.detail.xhr.getResponseHeader('X-Codex-Toast');
+  if (msg && window.Alpine?.store('toast')) {
+    Alpine.store('toast').show(msg);
+  }
+});
+
 document.addEventListener('alpine:init', () => {
   // --- Toast store (Sonner-style stack) -------------------------------------
   Alpine.store('toast', {
@@ -59,6 +69,7 @@ document.addEventListener('alpine:init', () => {
     type: initial.type,
     body: initial.body || '',
     drafts: initial.drafts || [],
+    loadedDraftId: '',
     bidding: false,
     showInflict: false,
     dirty: false,
@@ -95,12 +106,14 @@ document.addEventListener('alpine:init', () => {
       this.savedLabel = 'Inscribing…';
     },
 
-    loadDraftById(id) {
-      const d = this.drafts.find(x => x.id === id);
-      if (!d) return;
-      this.type = d.type;
-      this.body = d.body;
-      Alpine.store('toast').show('Draft loaded · ' + d.type);
+    loadDraftFrom(el) {
+      // Reads the draft straight off the <li>'s data-* attributes — keeps
+      // the source of truth in the server-rendered partial that HTMX swaps.
+      if (!el) return;
+      this.type = el.dataset.visionType;
+      this.body = el.dataset.body;
+      this.loadedDraftId = el.dataset.draftId;
+      Alpine.store('toast').show('Draft loaded · ' + this.type);
     },
 
     saveDraft() { Alpine.store('toast').show('Draft inscribed in the Codex'); },

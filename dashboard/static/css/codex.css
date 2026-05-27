@@ -341,34 +341,6 @@ a.kindred-card:hover .gilded {
   pointer-events: none;
 }
 
-/* --- wax seal ---------------------------------------------------------- */
-@keyframes seal-sway { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(2deg); } }
-.wax-seal {
-  position: absolute;
-  top: -36px; right: -28px;
-  width: 96px; height: 96px;
-  display: grid; place-items: center;
-  background: radial-gradient(circle at 30% 25%, #b03030 0%, #6a1414 55%, #3a0a0a 100%);
-  border-radius: 50%;
-  box-shadow:
-    inset 0 -8px 16px rgba(0,0,0,0.5),
-    inset 0 4px 12px rgba(255,200,160,0.18),
-    0 12px 24px -8px rgba(176,48,48,0.6);
-  animation: seal-sway 6s ease-in-out infinite;
-  color: #f5ede0;
-  font-family: 'Cinzel', serif;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-shadow: 0 1px 0 rgba(0,0,0,0.5);
-}
-.wax-seal::after {
-  content: "";
-  position: absolute; inset: 8px;
-  border-radius: 50%;
-  border: 1px dashed rgba(255,220,180,0.35);
-  pointer-events: none;
-}
-
 .typing-cursor::after {
   content: "▎";
   color: #b08a3e;

@@ -25,16 +25,29 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+from contextlib import asynccontextmanager  # noqa: E402
+
 from fastapi import FastAPI  # noqa: E402  -- after load_dotenv + logging
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
+import db  # noqa: E402  -- bot's db module, shared connection
 from dashboard.config import DASHBOARD_SESSION_SECRET
 
 BASE_DIR = Path(__file__).resolve().parent
 
-app = FastAPI(title="Zillah · Storyteller's Codex", docs_url=None, redoc_url=None)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure the schema (including the dashboard's vision_drafts/outbox tables)
+    # exists. The bot process also calls this on its own startup — safe to
+    # call from both, the CREATE TABLE statements are IF NOT EXISTS.
+    db.setup_database()
+    yield
+
+
+app = FastAPI(title="Zillah · Storyteller's Codex", docs_url=None, redoc_url=None, lifespan=lifespan)
 
 app.add_middleware(
     SessionMiddleware,
@@ -58,9 +71,11 @@ async def healthz():
 # Routers — imported after `templates` exists because they reference it.
 from dashboard.routes import auth as auth_routes  # noqa: E402
 from dashboard.routes import kindred as kindred_routes  # noqa: E402
+from dashboard.routes import drafts as drafts_routes  # noqa: E402
 
 app.include_router(auth_routes.router)
 app.include_router(kindred_routes.router)
+app.include_router(drafts_routes.router)
 
 
 # Dev-only: seed a fake session so the protected pages can be previewed

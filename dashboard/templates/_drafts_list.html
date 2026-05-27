@@ -1,0 +1,29 @@
+{# Drafts list partial — both initial render (via _include) and HTMX swap target. #}
+{% if drafts %}
+<ul class="divide-y divide-ink-700" id="drafts-list">
+  {% for d in drafts %}
+  <li class="py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 rounded-sm group"
+      data-draft-id="{{ d.id }}"
+      data-vision-type="{{ d.vision_type }}"
+      data-body="{{ d.body }}">
+    <div class="flex-1 pr-6 cursor-pointer"
+         @click="loadDraftFrom($el.closest('li'))">
+      <span class="smallcaps text-[11px] {% if 'Bleed' in d.vision_type %}text-blood-bright{% else %}text-bone-muted{% endif %} mr-3">{{ d.vision_type }}</span>
+      <span class="font-serif italic text-bone-muted">{{ d.body[:96] }}{% if d.body|length > 96 %}…{% endif %}</span>
+    </div>
+    <div class="flex items-baseline gap-4 shrink-0">
+      <span class="text-[10px] text-bone-dim smallcaps">{{ d.updated_at[:10] }}</span>
+      <button class="text-[10px] smallcaps text-bone-dim hover:text-blood-bright opacity-0 group-hover:opacity-100 transition-opacity"
+              hx-delete="/g/{{ guild_id }}/drafts/{{ d.id }}"
+              hx-target="closest li"
+              hx-swap="outerHTML"
+              hx-confirm="Burn this draft?">
+        Burn
+      </button>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="font-script italic text-bone-dim text-sm" id="drafts-list">No drafts in the Codex yet.</p>
+{% endif %}

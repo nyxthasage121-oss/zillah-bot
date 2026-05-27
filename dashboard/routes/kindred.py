@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse
 
+import db
 from dashboard import auth, data
 from dashboard.app import templates
 
@@ -45,6 +46,10 @@ async def kindred_editor(request: Request, guild_id: str, user_id: str):
     detail = data.get_kindred(guild_id, user_id)
     if not detail:
         raise HTTPException(404, "No such Kindred in this domain.")
+    # Raw DB rows for the _drafts_list partial (column shape matches what HTMX
+    # responses return, so the initial render and the post-save swap use the
+    # exact same template).
+    initial_drafts = db.list_drafts_for_player(guild_id, user_id)
     return templates.TemplateResponse(
         request,
         "editor.html",
@@ -53,6 +58,7 @@ async def kindred_editor(request: Request, guild_id: str, user_id: str):
             "user": auth.session_user(request),
             "all_guilds": auth.session_guilds(request),
             "k": detail,
+            "initial_drafts": initial_drafts,
             "vision_types": data.VISION_TYPES,
             "clan_labels": data.CLAN_LABELS,
         },

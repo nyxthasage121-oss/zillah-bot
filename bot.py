@@ -7,9 +7,12 @@ import os
 import discord
 from discord import app_commands
 
+import asyncio
+
 import clients
 import db
 import commands as cmd_registry
+import outbox_worker
 
 logger = logging.getLogger("zillah.bot")
 
@@ -28,6 +31,11 @@ def create_bot() -> tuple[discord.Client, app_commands.CommandTree]:
     async def on_ready() -> None:
         db.setup_database()
         await tree.sync()
+        # Spawn the outbox worker once, on first ready. Subsequent ready events
+        # (after a reconnect) shouldn't start a second copy.
+        if not getattr(bot, "_outbox_started", False):
+            asyncio.create_task(outbox_worker.run(bot))
+            bot._outbox_started = True
         logger.info("Zillah is online. Logged in as %s. Commands synced.", bot.user)
 
     @bot.event
