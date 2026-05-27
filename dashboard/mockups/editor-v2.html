@@ -177,9 +177,83 @@
     border-radius: 50%;
     border: 1px solid #b08a3e;
     display: inline-block;
+    cursor: pointer;
   }
   .hdot.filled {
     background: radial-gradient(circle at 35% 30%, #f0e0c0 0%, #b08a3e 60%, #6a4f1e 100%);
+  }
+
+  /* toast */
+  #toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: linear-gradient(180deg, #1f1618 0%, #120d0f 100%);
+    color: #ece4d6;
+    border: 1px solid #b08a3e;
+    box-shadow: 0 12px 40px -8px rgba(0,0,0,0.8), inset 0 1px 0 rgba(176,138,62,0.2);
+    padding: 14px 26px;
+    border-radius: 2px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 200;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* modal */
+  #modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(5,3,3,0.75);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  #modal-backdrop.show { display: flex; }
+  #modal {
+    max-width: 520px;
+    width: 90%;
+    background:
+      linear-gradient(180deg, rgba(176,138,62,0.06) 0%, rgba(176,138,62,0) 30%),
+      linear-gradient(180deg, #1f1618 0%, #120d0f 100%);
+    border: 1px solid #b08a3e;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.9);
+    padding: 32px 36px;
+    position: relative;
+  }
+  #modal::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 1px solid rgba(176,138,62,0.3);
+    pointer-events: none;
+  }
+
+  .typing-cursor::after {
+    content: "▎";
+    color: #b08a3e;
+    animation: blink 1s steps(2) infinite;
+    margin-left: 2px;
+  }
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  /* link reset */
+  a.kindred-card {
+    text-decoration: none;
+    color: inherit;
   }
 </style>
 </head>
@@ -206,10 +280,10 @@
       </div>
     </div>
     <nav class="flex items-center gap-7 text-sm text-bone-muted">
-      <a class="hover:text-bone smallcaps text-xs" href="#">Kindred</a>
-      <a class="hover:text-bone smallcaps text-xs" href="#">Drafts <span class="gold-text">3</span></a>
-      <a class="hover:text-bone smallcaps text-xs" href="#">Threads</a>
-      <a class="hover:text-bone smallcaps text-xs" href="#">Chronicle</a>
+      <a class="hover:text-bone smallcaps text-xs" href="kindred.html">Kindred</a>
+      <a class="hover:text-bone smallcaps text-xs" href="#" data-toast="Drafts gallery — not yet inscribed">Drafts <span class="gold-text">3</span></a>
+      <a class="hover:text-bone smallcaps text-xs" href="#" data-toast="Threads view — not yet inscribed">Threads</a>
+      <a class="hover:text-bone smallcaps text-xs" href="#" data-toast="Chronicle settings — not yet inscribed">Chronicle</a>
       <span class="w-px h-5 bg-ink-700"></span>
       <span class="flex items-center gap-2">
         <span class="w-7 h-7 rounded-full bg-gradient-to-br from-blood to-blood-deep border border-gold-dim flex items-center justify-center text-[10px] gold-bright">A</span>
@@ -221,7 +295,7 @@
 
 <!-- breadcrumb -->
 <div class="max-w-[1440px] mx-auto px-10 pt-6 text-[11px] smallcaps text-bone-dim">
-  Kindred <span class="dot"></span> Lucien Marchetti <span class="dot"></span> <span class="gold-text">New Vision</span>
+  <a href="kindred.html" class="hover:text-gold">Kindred</a> <span class="dot"></span> <a href="kindred.html" class="hover:text-gold">Lucien Marchetti</a> <span class="dot"></span> <span class="gold-text">New Vision</span>
 </div>
 
 <!-- HERO BANNER -->
@@ -495,22 +569,28 @@
         <h3 class="font-display smallcaps text-sm gold-text">Drafts for Lucien</h3>
         <span class="text-[10px] text-bone-dim italic">3 unsent</span>
       </div>
-      <ul class="divide-y divide-ink-700">
-        <li class="py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm">
+      <ul class="divide-y divide-ink-700" id="drafts-list">
+        <li class="draft-row py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm"
+            data-type="Resonance Bleed"
+            data-body="The mirror behind the bar has, all evening, refused your reflection. You thought yourself amused by it. Now, as the last mortal patron rises to leave, you catch what fills your absence there: a woman in white, seated where you sit, raising your glass to lips you cannot see. She drinks. The wine within your real glass lowers, exactly the measure she has taken.">
           <div class="flex-1 pr-6">
             <span class="smallcaps text-[11px] text-blood-bright mr-3">Resonance Bleed</span>
             <span class="font-serif italic text-bone-muted">The mirror behind the bar has, all evening, refused your reflection…</span>
           </div>
           <span class="text-[10px] text-bone-dim smallcaps shrink-0">moments ago</span>
         </li>
-        <li class="py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm">
+        <li class="draft-row py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm"
+            data-type="The Witness"
+            data-body="Someone has been counting your nights. You feel it in the way the doorman at the Pavilion no longer asks your name, and in how the new girl at the coat-check knows that you do not give up your coat. Tonight she sets it down beside an empty chair, as though saving the seat for whoever has been listing your habits.">
           <div class="flex-1 pr-6">
             <span class="smallcaps text-[11px] text-bone-muted mr-3">The Witness</span>
             <span class="font-serif italic text-bone-muted">Someone has been counting your nights. You feel it in the way the doorman…</span>
           </div>
           <span class="text-[10px] text-bone-dim smallcaps shrink-0">1 night past</span>
         </li>
-        <li class="py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm">
+        <li class="draft-row py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm"
+            data-type="Echo Vision"
+            data-body="The violinist at the Belmont plays a melody you remember from a salon in Florence, the year before your Embrace. You have not heard the piece since. The violinist is twenty-three years old and was born in Tampa. When the song ends he looks directly at you and mouths, in Italian: 'Did I play it correctly this time?'">
           <div class="flex-1 pr-6">
             <span class="smallcaps text-[11px] text-bone-muted mr-3">Echo Vision</span>
             <span class="font-serif italic text-bone-muted">The violinist at the Belmont plays a melody you remember from a salon in Florence…</span>
@@ -533,5 +613,203 @@
   </div>
 </footer>
 
+<!-- Toast -->
+<div id="toast">Saved</div>
+
+<!-- Confirm modal -->
+<div id="modal-backdrop">
+  <div id="modal">
+    <div class="smallcaps text-[10px] gold-text mb-2">Confirm the Working</div>
+    <h3 class="font-display text-3xl tracking-wide mb-3">Inflict this vision?</h3>
+    <p class="font-serif text-bone-muted italic leading-relaxed mb-6">
+      Once delivered to Lucien Marchetti, the vision becomes part of the chronicle.
+      The night cannot be unwritten, and the Codex will remember.
+    </p>
+    <div class="flex items-center justify-end gap-3">
+      <button id="modal-cancel" class="btn-ghost smallcaps text-[11px] px-5 py-2.5 rounded-sm">Withdraw</button>
+      <button id="modal-confirm" class="btn-send smallcaps text-xs px-6 py-2.5 rounded-sm tracking-widest font-medium">Yes, inflict it</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const $ = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+  // Toast
+  const toast = $('#toast');
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  // Nav placeholders
+  $$('[data-toast]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      showToast(el.dataset.toast);
+    });
+  });
+
+  // Chip selection
+  const chips = $$('.chip');
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => c.removeAttribute('aria-selected'));
+      chip.setAttribute('aria-selected', 'true');
+    });
+  });
+
+  // Editor + char count
+  const textarea = $('.vision-input');
+  const meta = $('.vision-input').closest('.gilded').querySelector('.border-t.rule');
+  function updateCount() {
+    const len = textarea.value.length;
+    const seconds = Math.max(1, Math.round(len / 22));
+    if (meta) {
+      const left = meta.querySelector('div');
+      if (left) {
+        left.innerHTML =
+          `<span><span class="gold-text font-medium">${len}</span> characters</span>` +
+          `<span class="dot"></span>` +
+          `<span>≈ ${seconds} seconds aloud</span>` +
+          `<span class="dot"></span>` +
+          `<span class="italic">2 symbols echoed: <span class="text-bone">mirror, woman in white</span></span>`;
+      }
+    }
+  }
+  textarea.addEventListener('input', updateCount);
+
+  // Auto-save indicator
+  const saveIndicator = document.querySelector('.text-right .italic');
+  let dirty = false;
+  textarea.addEventListener('input', () => {
+    dirty = true;
+    if (saveIndicator) saveIndicator.textContent = 'Inscribing…';
+  });
+  setInterval(() => {
+    if (dirty) {
+      dirty = false;
+      if (saveIndicator) saveIndicator.textContent = 'Draft auto-inscribed · moments ago';
+    }
+  }, 2000);
+
+  // Drafts → load into editor
+  $$('.draft-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const type = row.dataset.type;
+      const body = row.dataset.body;
+      // select the matching chip
+      chips.forEach(c => {
+        if (c.textContent.trim() === type) c.setAttribute('aria-selected', 'true');
+        else c.removeAttribute('aria-selected');
+      });
+      textarea.value = body;
+      updateCount();
+      showToast('Draft loaded · ' + type);
+      textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+
+  // Hunger pips (toggle)
+  $$('.pip').forEach((pip, i, arr) => {
+    pip.style.cursor = 'pointer';
+    pip.addEventListener('click', () => {
+      const filled = pip.classList.contains('filled');
+      // fill all up to clicked, or clear after
+      arr.forEach((p, j) => {
+        if (j <= i && !filled) p.classList.add('filled');
+        else if (j > i && filled) p.classList.remove('filled');
+        else if (j > i && !filled) p.classList.remove('filled');
+        else if (j <= i && filled) {
+          if (j === i) p.classList.remove('filled');
+          else p.classList.add('filled');
+        }
+      });
+    });
+  });
+
+  // Save Draft
+  const buttons = $$('.btn-ghost');
+  buttons.forEach(b => {
+    const label = b.textContent.trim();
+    b.addEventListener('click', () => {
+      if (label === 'Save Draft') showToast('Draft inscribed in the Codex');
+      else if (label === 'Schedule for Sundown') showToast('Scheduled · will inflict at sundown');
+      else if (label === 'Preview in Discord') showToast('Preview opens in Discord (mockup)');
+      else if (label === 'Withdraw') closeModal();
+    });
+  });
+
+  // Bid Claude to draft (simulated typing)
+  const claudeBtn = Array.from(document.querySelectorAll('button')).find(
+    b => b.textContent.includes('Bid Claude to draft')
+  );
+  const sampleDrafts = [
+    "Tonight, every wineglass you pass holds a single red moth at its bottom, drowned and unmoving. The waiters notice nothing. When you lift one to your own table, the moth, very slowly, opens its wings.",
+    "The woman in white is at your elbow before you hear her arrive. She does not speak. She places, on the marble in front of you, a small mirror. Your reflection in it is wearing a different coat than the one you have on tonight — the coat you wore the night you were Embraced.",
+    "Somewhere beneath the city a violin is being tuned. You feel each adjustment as a small pull behind your sternum. When the player finally begins, you recognise the piece: it is the song you composed for Vittoria, the year she made you, and which you have told no one of since."
+  ];
+  if (claudeBtn) {
+    claudeBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      claudeBtn.disabled = true;
+      claudeBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none" class="animate-spin"><path d="M8 1 L9.5 6.5 L15 8 L9.5 9.5 L8 15 L6.5 9.5 L1 8 L6.5 6.5 Z" fill="#b08a3e"/></svg> Bidding…`;
+      const draft = sampleDrafts[Math.floor(Math.random() * sampleDrafts.length)];
+      textarea.value = '';
+      textarea.classList.add('typing-cursor');
+      for (let i = 0; i < draft.length; i++) {
+        textarea.value += draft[i];
+        updateCount();
+        await new Promise(r => setTimeout(r, 14 + Math.random() * 18));
+      }
+      textarea.classList.remove('typing-cursor');
+      claudeBtn.disabled = false;
+      claudeBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1 L9.5 6.5 L15 8 L9.5 9.5 L8 15 L6.5 9.5 L1 8 L6.5 6.5 Z" fill="#b08a3e"/></svg> Bid Claude to draft`;
+    });
+  }
+
+  // Inflict (open modal)
+  const backdrop = $('#modal-backdrop');
+  function openModal() { backdrop.classList.add('show'); }
+  function closeModal() { backdrop.classList.remove('show'); }
+  const inflictBtn = Array.from(document.querySelectorAll('.btn-send')).find(
+    b => b.textContent.trim() === 'Inflict This Vision'
+  );
+  if (inflictBtn) inflictBtn.addEventListener('click', openModal);
+  $('#modal-cancel').addEventListener('click', closeModal);
+  $('#modal-confirm').addEventListener('click', () => {
+    closeModal();
+    showToast('Vision inflicted · sent to Discord');
+  });
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+    // ⌘↵ to inflict
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') openModal();
+    // ⌘S to save
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      showToast('Draft inscribed in the Codex');
+    }
+  });
+
+  // Tone & Thread selects → toast
+  $$('select').forEach(s => {
+    s.addEventListener('change', () => {
+      showToast(s.options[s.selectedIndex].text + ' selected');
+    });
+  });
+
+  // Initial count
+  updateCount();
+})();
+</script>
 </body>
 </html>
