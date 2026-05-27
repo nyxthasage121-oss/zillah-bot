@@ -1,10 +1,9 @@
 {% extends "base.html" %}
 {% set active = 'kindred' %}
 {% block title %}Zillah — The Kindred · {{ guild.name }}{% endblock %}
-{% block scripts %}<script src="{{ url_for('static', path='/js/kindred.js') }}"></script>{% endblock %}
 
 {% block content %}
-<main class="max-w-[1440px] mx-auto px-10 py-10">
+<main class="max-w-[1440px] mx-auto px-10 py-10" x-data="kindredRoster()">
 
   <div class="flex items-end justify-between mb-2">
     <div>
@@ -13,15 +12,17 @@
       <p class="font-script italic text-bone-muted mt-2 text-lg">
         {{ roster|length }} soul{{ roster|length != 1 and 's' or '' }} inscribed in your chronicle
       </p>
+      <p class="marginalia mt-2">~ from the keeper's ledger ~</p>
     </div>
     <div class="flex items-center gap-3">
       <input type="search" placeholder="Search by name, clan, sire…"
+             x-model="query" @input.debounce.150ms="apply()"
              class="bg-ink-900 border rule text-bone px-4 py-2.5 rounded-sm text-sm font-serif w-72 placeholder:italic placeholder:text-bone-dim focus:border-gold-dim focus:outline-none">
-      <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm" data-toast="New Kindred form — not yet wired">+ New Kindred</button>
+      <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm"
+              @click="$store.toast.show('New Kindred form — not yet wired')">+ New Kindred</button>
     </div>
   </div>
 
-  {# Build a clan tally from the roster #}
   {% set tallies = {} %}
   {% for k in roster %}
     {% if tallies.update({k.clan: tallies.get(k.clan, 0) + 1}) %}{% endif %}
@@ -29,10 +30,14 @@
 
   <div class="flex items-center gap-2 mt-6 mb-8 flex-wrap">
     <span class="smallcaps text-[10px] text-bone-dim mr-3">Filter by clan</span>
-    <button class="filter btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm filter-active" data-clan="all">All · {{ roster|length }}</button>
-    {% for clan, label in clan_labels.items() %}
-      {% if tallies.get(clan) %}
-      <button class="filter btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm" data-clan="{{ clan }}">{{ label }} · {{ tallies.get(clan) }}</button>
+    <button class="btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm"
+            :class="{ 'filter-active': clan === 'all' }"
+            @click="clan = 'all'; apply()">All · {{ roster|length }}</button>
+    {% for clan_key, label in clan_labels.items() %}
+      {% if tallies.get(clan_key) %}
+      <button class="btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm"
+              :class="{ 'filter-active': clan === '{{ clan_key }}' }"
+              @click="clan = '{{ clan_key }}'; apply()">{{ label }} · {{ tallies.get(clan_key) }}</button>
       {% endif %}
     {% endfor %}
   </div>

@@ -1,7 +1,16 @@
 {% extends "base.html" %}
 {% set active = 'kindred' %}
 {% block title %}Zillah — Compose for {{ k.base.name }}{% endblock %}
-{% block scripts %}<script src="{{ url_for('static', path='/js/editor.js') }}"></script>{% endblock %}
+
+{# Inline SVG → data URL for the watermark sigil (per clan). Used by .watermark::before. #}
+{% set watermark_svgs = {
+  'toreador':  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'><circle cx='16' cy='16' r='14' stroke='%23b08a3e' stroke-width='0.5'/><path d='M16 6 C 11 11, 11 16, 16 16 C 21 16, 21 11, 16 6 Z M6 16 C 11 11, 16 11, 16 16 C 16 21, 11 21, 6 16 Z M16 26 C 21 21, 21 16, 16 16 C 11 16, 11 21, 16 26 Z M26 16 C 21 21, 16 21, 16 16 C 16 11, 21 11, 26 16 Z' stroke='%23b08a3e' stroke-width='0.5'/></svg>\")",
+  'tremere':   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'><path d='M16 4 L26 22 L6 22 Z' stroke='%23b03030' stroke-width='0.7'/><circle cx='16' cy='16' r='13' stroke='%23b03030' stroke-width='0.3'/></svg>\")",
+  'malkavian': "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'><circle cx='16' cy='16' r='13' stroke='%238a4ab0' stroke-width='0.5'/><circle cx='16' cy='16' r='6' stroke='%238a4ab0' stroke-width='0.5' stroke-dasharray='2 2'/></svg>\")",
+  'hecata':    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'><circle cx='16' cy='16' r='13' stroke='%236a8a4a' stroke-width='0.5'/><path d='M16 6 L16 24 M10 16 L22 16' stroke='%236a8a4a' stroke-width='0.7'/></svg>\")",
+  'banuhaqim': "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'><circle cx='16' cy='16' r='13' stroke='%234a8a8a' stroke-width='0.5'/><path d='M16 5 L20 16 L16 27 L12 16 Z' stroke='%234a8a8a' stroke-width='0.6'/></svg>\")",
+} %}
+{% set watermark = watermark_svgs.get(k.base.clan, watermark_svgs['toreador']) %}
 
 {% block content %}
 <div class="max-w-[1440px] mx-auto px-10 pt-6 text-[11px] smallcaps text-bone-dim">
@@ -63,7 +72,7 @@
   <!-- LEFT: DOSSIER -->
   <aside class="col-span-4 space-y-7">
 
-    <div class="gilded rounded-sm p-6">
+    <div class="gilded watermark rounded-sm p-6" style="--watermark: {{ watermark }};">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-display smallcaps text-sm gold-text">Active Threads</h3>
         <span class="text-[10px] text-bone-dim italic">{{ k.threads|length }} open</span>
@@ -82,7 +91,7 @@
       {% endif %}
     </div>
 
-    <div class="gilded rounded-sm p-6">
+    <div class="gilded watermark rounded-sm p-6" style="--watermark: {{ watermark }};">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-display smallcaps text-sm gold-text">Recurring Symbols</h3>
         <span class="text-[10px] text-bone-dim italic">divined by Zillah</span>
@@ -98,10 +107,10 @@
       {% endif %}
     </div>
 
-    <div class="gilded rounded-sm p-6">
+    <div class="gilded watermark rounded-sm p-6" style="--watermark: {{ watermark }};">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-display smallcaps text-sm gold-text">From the Codex</h3>
-        <a class="text-[10px] smallcaps text-bone-dim hover:text-gold" href="#" data-toast="Full history — not yet wired">Full History →</a>
+        <a class="text-[10px] smallcaps text-bone-dim hover:text-gold" href="#" @click.prevent="$store.toast.show('Full history — not yet wired')">Full History →</a>
       </div>
       {% if k.recent_visions %}
       <ul class="space-y-5">
@@ -111,7 +120,7 @@
             <span class="smallcaps text-[11px] {% if 'Bleed' in v.type %}text-blood-bright{% else %}text-bone-muted{% endif %}">{{ v.type }}</span>
             <span class="text-[10px] text-bone-dim smallcaps">{{ v.when }}</span>
           </div>
-          <p class="font-serif text-bone-muted text-sm mt-1.5 italic leading-relaxed">{{ v.body }}</p>
+          <p class="font-serif text-bone-muted text-sm mt-1.5 italic leading-relaxed dropcap-sm">{{ v.body }}</p>
         </li>
         {% endfor %}
       </ul>
@@ -121,16 +130,21 @@
     </div>
   </aside>
 
-  <!-- RIGHT: EDITOR -->
-  <section class="col-span-8 space-y-6">
+  {# Build the drafts payload server-side, then pass it into Alpine as one JSON blob — avoids per-row attribute escaping. #}
+  {% set drafts_payload = k.drafts | map(attribute='__dict__') | list %}
+
+  <!-- RIGHT: EDITOR — Alpine root -->
+  <section class="col-span-8 space-y-6"
+           x-data="visionEditor({ type: 'Resonance Bleed', body: '', drafts: {{ drafts_payload | tojson | forceescape }} })">
 
     <div class="flex items-baseline justify-between">
       <div>
         <div class="smallcaps text-[11px] gold-text">Act of Auspex</div>
         <h2 class="font-display text-4xl tracking-wide mt-1">Compose a Vision</h2>
+        <p class="marginalia mt-2">~ from the keeper's hand ~</p>
       </div>
       <div class="text-right">
-        <div class="text-xs text-bone-dim italic" data-save-indicator>Draft auto-inscribed · moments ago</div>
+        <div class="text-xs text-bone-dim italic" x-text="savedLabel">Draft auto-inscribed · moments ago</div>
         <div class="smallcaps text-[10px] text-gold-dim mt-1">⌘S to save · ⌘↵ to inflict</div>
       </div>
     </div>
@@ -142,7 +156,9 @@
       </div>
       <div class="flex flex-wrap gap-2">
         {% for vt in vision_types %}
-        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm"{% if loop.first %} aria-selected="true"{% endif %}>{{ vt }}</button>
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm"
+                :aria-selected="type === '{{ vt }}'"
+                @click="type = '{{ vt }}'">{{ vt }}</button>
         {% endfor %}
       </div>
     </div>
@@ -150,22 +166,59 @@
     <div class="flex items-center gap-6 text-sm">
       <div class="flex items-center gap-3">
         <span class="smallcaps text-[11px] gold-text">Thread</span>
-        <select class="gilded-inset text-bone px-3 py-1.5 rounded-sm text-sm font-script">
-          {% for t in k.threads %}
-            <option>{{ t.title }}</option>
-          {% endfor %}
-          <option>— unaligned —</option>
-          <option>+ open a new thread…</option>
-        </select>
+        {% set thread_opts = (k.threads | map(attribute='title') | list) + ['— unaligned —', '+ open a new thread…'] %}
+        <div x-data="combobox({{ thread_opts | tojson | forceescape }}, {{ thread_opts[0] | tojson | forceescape }})"
+             @keydown="onKey($event)"
+             @click.away="close()"
+             class="relative">
+          <button type="button" class="combobox-trigger" :aria-expanded="open" @click="toggle()">
+            <span x-text="selected"></span>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 16 16"><path d="M4 6 L8 10 L12 6" stroke="currentColor" fill="none" stroke-width="1.2"/></svg>
+          </button>
+          <ul class="combobox-content absolute z-30 mt-1 py-1"
+              x-cloak
+              x-show="open"
+              x-transition:enter="transition ease-out duration-150"
+              x-transition:enter-start="opacity-0 -translate-y-1"
+              x-transition:enter-end="opacity-100 translate-y-0">
+            <template x-for="(opt, i) in options" :key="opt">
+              <li class="combobox-option"
+                  :class="{ 'is-selected': opt === selected, 'is-highlighted': i === highlighted }"
+                  @mouseenter="highlighted = i"
+                  @click="select(opt)">
+                <span x-text="opt"></span>
+              </li>
+            </template>
+          </ul>
+        </div>
       </div>
       <div class="flex items-center gap-3">
         <span class="smallcaps text-[11px] gold-text">Tone</span>
-        <select class="gilded-inset text-bone px-3 py-1.5 rounded-sm text-sm font-script">
-          <option>Sensuous</option>
-          <option>Ominous</option>
-          <option>Cryptic</option>
-          <option>Beautiful / cruel</option>
-        </select>
+        {% set tone_opts = ['Sensuous', 'Ominous', 'Cryptic', 'Beautiful / cruel'] %}
+        <div x-data="combobox({{ tone_opts | tojson | forceescape }}, {{ tone_opts[0] | tojson | forceescape }})"
+             @keydown="onKey($event)"
+             @click.away="close()"
+             class="relative">
+          <button type="button" class="combobox-trigger" :aria-expanded="open" @click="toggle()">
+            <span x-text="selected"></span>
+            <svg class="chevron" width="14" height="14" viewBox="0 0 16 16"><path d="M4 6 L8 10 L12 6" stroke="currentColor" fill="none" stroke-width="1.2"/></svg>
+          </button>
+          <ul class="combobox-content absolute z-30 mt-1 py-1"
+              x-cloak
+              x-show="open"
+              x-transition:enter="transition ease-out duration-150"
+              x-transition:enter-start="opacity-0 -translate-y-1"
+              x-transition:enter-end="opacity-100 translate-y-0">
+            <template x-for="(opt, i) in options" :key="opt">
+              <li class="combobox-option"
+                  :class="{ 'is-selected': opt === selected, 'is-highlighted': i === highlighted }"
+                  @mouseenter="highlighted = i"
+                  @click="select(opt)">
+                <span x-text="opt"></span>
+              </li>
+            </template>
+          </ul>
+        </div>
       </div>
     </div>
 
@@ -175,22 +228,28 @@
           <span class="smallcaps gold-text">Vision Text</span>
           <span class="italic">narrated to {{ k.base.name.split(' ')[0] }} in second person</span>
         </div>
-        <button class="hover:text-gold-bright smallcaps text-[11px] flex items-center gap-2">
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1 L9.5 6.5 L15 8 L9.5 9.5 L8 15 L6.5 9.5 L1 8 L6.5 6.5 Z" fill="#b08a3e"/></svg>
-          Bid Claude to draft
+        <button class="hover:text-gold-bright smallcaps text-[11px] flex items-center gap-2"
+                @click="bidClaude()" :disabled="bidding">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" :class="{ 'animate-spin': bidding }">
+            <path d="M8 1 L9.5 6.5 L15 8 L9.5 9.5 L8 15 L6.5 9.5 L1 8 L6.5 6.5 Z" fill="#b08a3e"/>
+          </svg>
+          <span x-text="bidding ? 'Bidding…' : 'Bid Claude to draft'"></span>
         </button>
       </div>
       <div class="px-8 py-7">
         <textarea
           class="vision-input font-serif text-lg dropcap"
+          :class="{ 'typing-cursor': bidding }"
           rows="13"
+          x-model="body"
+          @input="onInput()"
           placeholder="Begin the vision here. Draw from the Codex on the left…"></textarea>
       </div>
       <div class="px-7 py-3 border-t rule flex items-center justify-between text-xs text-bone-dim">
         <div>
-          <span><span class="gold-text font-medium">0</span> characters</span>
+          <span><span class="gold-text font-medium" x-text="chars">0</span> characters</span>
           <span class="dot"></span>
-          <span>≈ 0 seconds aloud</span>
+          <span>≈ <span x-text="seconds">0</span> seconds aloud</span>
         </div>
         <div class="italic">*italics* render in Discord</div>
       </div>
@@ -198,13 +257,13 @@
 
     <div class="flex items-center justify-between pt-2">
       <div class="flex items-center gap-3">
-        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">Save Draft</button>
-        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">Schedule for Sundown</button>
-        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">Preview in Discord</button>
+        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm" @click="saveDraft()">Save Draft</button>
+        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm" @click="schedule()">Schedule for Sundown</button>
+        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm" @click="preview()">Preview in Discord</button>
       </div>
       <div class="flex items-center gap-5">
         <span class="text-[11px] text-bone-dim italic">Once inflicted, the night cannot be unwritten.</span>
-        <button class="btn-send smallcaps text-xs px-7 py-3 rounded-sm tracking-widest font-medium">Inflict This Vision</button>
+        <button class="btn-send smallcaps text-xs px-7 py-3 rounded-sm tracking-widest font-medium" @click="showInflict = true">Inflict This Vision</button>
       </div>
     </div>
 
@@ -214,11 +273,10 @@
         <span class="text-[10px] text-bone-dim italic">{{ k.drafts|length }} unsent</span>
       </div>
       {% if k.drafts %}
-      <ul class="divide-y divide-ink-700" id="drafts-list">
+      <ul class="divide-y divide-ink-700">
         {% for d in k.drafts %}
-        <li class="draft-row py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm"
-            data-type="{{ d.type }}"
-            data-body="{{ d.body }}">
+        <li class="py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm"
+            @click="loadDraftById('{{ d.id }}')">
           <div class="flex-1 pr-6">
             <span class="smallcaps text-[11px] {% if 'Bleed' in d.type %}text-blood-bright{% else %}text-bone-muted{% endif %} mr-3">{{ d.type }}</span>
             <span class="font-serif italic text-bone-muted">{{ d.body[:96] }}{% if d.body|length > 96 %}…{% endif %}</span>
@@ -231,22 +289,38 @@
       <p class="font-script italic text-bone-dim text-sm">No drafts in the Codex yet.</p>
       {% endif %}
     </div>
+
+    <!-- Inflict confirm modal -->
+    <div x-cloak
+         x-show="showInflict"
+         @click.self="showInflict = false"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="modal-backdrop">
+      <div class="modal rounded-sm"
+           x-transition:enter="transition ease-out duration-250"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100">
+        <div class="wax-seal text-[10px] -rotate-6 text-center leading-tight">
+          <div>SEAL<br/>OF<br/>NIGHT</div>
+        </div>
+        <div class="smallcaps text-[10px] gold-text mb-2">Confirm the Working</div>
+        <h3 class="font-display text-3xl tracking-wide mb-3">Inflict this vision?</h3>
+        <p class="font-serif text-bone-muted italic leading-relaxed mb-6">
+          Once delivered to {{ k.base.name }}, the vision becomes part of the chronicle.
+          The night cannot be unwritten, and the Codex will remember.
+        </p>
+        <div class="flex items-center justify-end gap-3">
+          <button class="btn-ghost smallcaps text-[11px] px-5 py-2.5 rounded-sm" @click="showInflict = false">Withdraw</button>
+          <button class="btn-send smallcaps text-xs px-6 py-2.5 rounded-sm tracking-widest font-medium" @click="inflict()">Yes, inflict it</button>
+        </div>
+      </div>
+    </div>
+
   </section>
 </main>
-
-<!-- Confirm modal -->
-<div id="modal-backdrop">
-  <div id="modal">
-    <div class="smallcaps text-[10px] gold-text mb-2">Confirm the Working</div>
-    <h3 class="font-display text-3xl tracking-wide mb-3">Inflict this vision?</h3>
-    <p class="font-serif text-bone-muted italic leading-relaxed mb-6">
-      Once delivered to {{ k.base.name }}, the vision becomes part of the chronicle.
-      The night cannot be unwritten, and the Codex will remember.
-    </p>
-    <div class="flex items-center justify-end gap-3">
-      <button id="modal-cancel" class="btn-ghost smallcaps text-[11px] px-5 py-2.5 rounded-sm">Withdraw</button>
-      <button id="modal-confirm" class="btn-send smallcaps text-xs px-6 py-2.5 rounded-sm tracking-widest font-medium">Yes, inflict it</button>
-    </div>
-  </div>
-</div>
 {% endblock %}
