@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zillah — Compose Vision</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:    { 950: '#0a0708', 900: '#120d0f', 850: '#171012', 800: '#1f1618', 700: '#2a1f22' },
+          bone:   { DEFAULT: '#ece4d6', muted: '#c9bfb0', dim: '#8b8275' },
+          blood:  { DEFAULT: '#8a2424', bright: '#b03030', deep: '#3a1418' },
+          gold:   { DEFAULT: '#b08a3e', bright: '#d4a94d', dim: '#7a5e29' },
+          mauve:  { DEFAULT: '#4a3d44', dim: '#352b30' },
+        },
+        fontFamily: {
+          display: ['"Cinzel"', 'serif'],
+          script:  ['"Cormorant Garamond"', 'serif'],
+          serif:   ['"EB Garamond"', 'serif'],
+          sans:    ['Inter', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    background-color: #0a0708;
+    color: #ece4d6;
+    background-image:
+      radial-gradient(ellipse 1200px 600px at 50% -200px, rgba(138, 36, 36, 0.18), transparent 60%),
+      radial-gradient(ellipse 800px 400px at 100% 100%, rgba(176, 138, 62, 0.06), transparent 60%);
+  }
+  /* film grain */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode: overlay;
+  }
+  /* vignette */
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 99;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%);
+  }
+
+  .rule { border-color: #2a1f22; }
+  .smallcaps { font-variant: all-small-caps; letter-spacing: 0.16em; }
+
+  /* gilded surface for cards */
+  .gilded {
+    background:
+      linear-gradient(180deg, rgba(176,138,62,0.04) 0%, rgba(176,138,62,0) 30%),
+      linear-gradient(180deg, #171012 0%, #120d0f 100%);
+    border: 1px solid #2a1f22;
+    box-shadow:
+      inset 0 0 0 1px rgba(176,138,62,0.05),
+      inset 0 1px 0 rgba(236, 228, 214, 0.03),
+      0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .gilded-inset {
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0) 40%),
+      #120d0f;
+    border: 1px solid #2a1f22;
+    box-shadow: inset 0 1px 6px rgba(0,0,0,0.6);
+  }
+
+  /* gold double-line frame */
+  .frame-gold {
+    position: relative;
+  }
+  .frame-gold::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border: 1px solid rgba(176,138,62,0.25);
+    pointer-events: none;
+  }
+
+  /* chip */
+  .chip {
+    border: 1px solid #2a1f22;
+    color: #c9bfb0;
+    background: rgba(18,13,15,0.6);
+    transition: all .15s ease;
+  }
+  .chip:hover { border-color: #b08a3e; color: #ece4d6; }
+  .chip[aria-selected="true"] {
+    border-color: #b03030;
+    color: #ece4d6;
+    background: linear-gradient(180deg, rgba(138,36,36,0.18), rgba(138,36,36,0.06));
+    box-shadow: inset 0 0 0 1px rgba(176,138,62,0.18);
+  }
+
+  /* editor textarea */
+  .vision-input {
+    background: transparent;
+    color: #ece4d6;
+    outline: none;
+    resize: none;
+    width: 100%;
+    line-height: 1.75;
+  }
+  .vision-input::placeholder { color: #5e544a; font-style: italic; }
+
+  /* drop cap */
+  .dropcap::first-letter {
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    float: left;
+    font-size: 3.4em;
+    line-height: 0.85;
+    padding: 0.18em 0.18em 0 0;
+    color: #b08a3e;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+  }
+
+  .dot::before { content: "·"; margin: 0 0.6rem; color: #4a3d44; }
+
+  .btn-send {
+    background: linear-gradient(180deg, #b03030 0%, #8a2424 100%);
+    color: #f5ede0;
+    border: 1px solid #d4a94d;
+    box-shadow:
+      inset 0 1px 0 rgba(255,200,160,0.25),
+      inset 0 -1px 0 rgba(0,0,0,0.4),
+      0 6px 18px -6px rgba(176,48,48,0.55);
+    transition: all .15s ease;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+  .btn-send:hover {
+    background: linear-gradient(180deg, #c23838 0%, #9a2828 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,200,160,0.3),
+      inset 0 -1px 0 rgba(0,0,0,0.4),
+      0 10px 24px -8px rgba(176,48,48,0.7);
+  }
+  .btn-ghost {
+    border: 1px solid #2a1f22;
+    color: #c9bfb0;
+    background: rgba(18,13,15,0.5);
+    transition: all .15s ease;
+  }
+  .btn-ghost:hover { border-color: #b08a3e; color: #ece4d6; }
+
+  .gold-text { color: #b08a3e; }
+  .gold-bright { color: #d4a94d; }
+
+  /* hunger pip */
+  .pip {
+    width: 14px; height: 14px;
+    border: 1px solid #b08a3e;
+    transform: rotate(45deg);
+    display: inline-block;
+  }
+  .pip.filled {
+    background: linear-gradient(135deg, #b03030, #5a1010);
+    border-color: #d4a94d;
+    box-shadow: inset 0 0 4px rgba(255,180,140,0.4);
+  }
+  /* humanity dot */
+  .hdot {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    border: 1px solid #b08a3e;
+    display: inline-block;
+  }
+  .hdot.filled {
+    background: radial-gradient(circle at 35% 30%, #f0e0c0 0%, #b08a3e 60%, #6a4f1e 100%);
+  }
+</style>
+</head>
+<body class="font-sans antialiased">
+
+<!-- TOP BAR -->
+<header class="border-b rule relative">
+  <div class="max-w-[1440px] mx-auto px-10 h-16 flex items-center justify-between relative">
+    <div class="flex items-center gap-4">
+      <!-- Sigil mark -->
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14" stroke="#b08a3e" stroke-width="0.7"/>
+        <circle cx="16" cy="16" r="10" stroke="#b08a3e" stroke-width="0.4"/>
+        <path d="M16 4 L16 28 M4 16 L28 16 M7 7 L25 25 M25 7 L7 25" stroke="#b08a3e" stroke-width="0.4"/>
+        <circle cx="16" cy="16" r="2.5" fill="#8a2424" stroke="#d4a94d" stroke-width="0.5"/>
+      </svg>
+      <div class="leading-tight">
+        <div class="font-display tracking-[0.2em] text-xl">ZILLAH</div>
+        <div class="smallcaps text-[10px] text-gold">Storyteller's Codex</div>
+      </div>
+      <div class="ml-6 pl-6 border-l rule">
+        <div class="smallcaps text-[10px] text-bone-dim">Domain</div>
+        <div class="font-script text-base text-bone">St. Augustine by Night</div>
+      </div>
+    </div>
+    <nav class="flex items-center gap-7 text-sm text-bone-muted">
+      <a class="hover:text-bone smallcaps text-xs" href="#">Kindred</a>
+      <a class="hover:text-bone smallcaps text-xs" href="#">Drafts <span class="gold-text">3</span></a>
+      <a class="hover:text-bone smallcaps text-xs" href="#">Threads</a>
+      <a class="hover:text-bone smallcaps text-xs" href="#">Chronicle</a>
+      <span class="w-px h-5 bg-ink-700"></span>
+      <span class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full bg-gradient-to-br from-blood to-blood-deep border border-gold-dim flex items-center justify-center text-[10px] gold-bright">A</span>
+        <span class="text-bone-muted">storyteller_amelia</span>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<!-- breadcrumb -->
+<div class="max-w-[1440px] mx-auto px-10 pt-6 text-[11px] smallcaps text-bone-dim">
+  Kindred <span class="dot"></span> Lucien Marchetti <span class="dot"></span> <span class="gold-text">New Vision</span>
+</div>
+
+<!-- HERO BANNER -->
+<section class="max-w-[1440px] mx-auto px-10 mt-4">
+  <div class="gilded frame-gold rounded-sm overflow-hidden">
+    <div class="relative px-10 py-8" style="background-image: radial-gradient(circle at 85% 50%, rgba(138,36,36,0.18), transparent 50%), radial-gradient(circle at 10% 100%, rgba(176,138,62,0.08), transparent 60%);">
+      <!-- Toreador rose sigil (decorative SVG, top-right) -->
+      <svg class="absolute top-6 right-10 opacity-30" width="120" height="120" viewBox="0 0 100 100">
+        <defs>
+          <radialGradient id="rose" cx="50%" cy="50%">
+            <stop offset="0%" stop-color="#d4a94d"/>
+            <stop offset="100%" stop-color="#7a5e29"/>
+          </radialGradient>
+        </defs>
+        <g fill="none" stroke="url(#rose)" stroke-width="0.6">
+          <circle cx="50" cy="50" r="48"/>
+          <circle cx="50" cy="50" r="36"/>
+          <path d="M50 14 C 32 30, 32 50, 50 50 C 68 50, 68 30, 50 14 Z"/>
+          <path d="M14 50 C 30 32, 50 32, 50 50 C 50 68, 30 68, 14 50 Z"/>
+          <path d="M50 86 C 68 70, 68 50, 50 50 C 32 50, 32 70, 50 86 Z"/>
+          <path d="M86 50 C 70 68, 50 68, 50 50 C 50 32, 70 32, 86 50 Z"/>
+          <circle cx="50" cy="50" r="6" fill="#8a2424" stroke="#d4a94d" stroke-width="0.5"/>
+        </g>
+      </svg>
+
+      <div class="relative">
+        <div class="smallcaps text-xs gold-text mb-2">Clan Toreador · 8th Generation · Camarilla</div>
+        <h1 class="font-display text-5xl tracking-wide mb-1">Lucien Marchetti</h1>
+        <p class="font-script italic text-lg text-bone-muted mt-1">"The Rose of the Ponte Vecchio" · Embraced anno 1894 · sired by Vittoria della Rovere</p>
+
+        <!-- vitals strip -->
+        <div class="mt-7 flex flex-wrap items-end gap-10">
+          <!-- Hunger -->
+          <div>
+            <div class="smallcaps text-[10px] text-bone-dim mb-2">Hunger</div>
+            <div class="flex gap-1.5">
+              <span class="pip filled"></span>
+              <span class="pip filled"></span>
+              <span class="pip filled"></span>
+              <span class="pip"></span>
+              <span class="pip"></span>
+            </div>
+          </div>
+          <!-- Humanity -->
+          <div>
+            <div class="smallcaps text-[10px] text-bone-dim mb-2">Humanity · 6</div>
+            <div class="flex gap-1.5">
+              <span class="hdot filled"></span>
+              <span class="hdot filled"></span>
+              <span class="hdot filled"></span>
+              <span class="hdot filled"></span>
+              <span class="hdot filled"></span>
+              <span class="hdot filled"></span>
+              <span class="hdot"></span>
+              <span class="hdot"></span>
+              <span class="hdot"></span>
+              <span class="hdot"></span>
+            </div>
+          </div>
+          <!-- Blood Potency -->
+          <div>
+            <div class="smallcaps text-[10px] text-bone-dim mb-2">Blood Potency · 3</div>
+            <div class="flex gap-1.5">
+              <span class="hdot filled"></span>
+              <span class="hdot filled"></span>
+              <span class="hdot filled"></span>
+              <span class="hdot"></span>
+              <span class="hdot"></span>
+            </div>
+          </div>
+          <!-- Auspex -->
+          <div class="border-l rule pl-10 ml-2">
+            <div class="smallcaps text-[10px] text-bone-dim mb-2">Auspex · ●●●●</div>
+            <div class="font-script text-base text-bone-muted italic">Scry the Soul unlocked</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ornamental divider -->
+<div class="max-w-[1440px] mx-auto px-10 mt-8 flex items-center gap-4">
+  <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gold-dim to-transparent opacity-50"></div>
+  <svg width="32" height="14" viewBox="0 0 32 14" fill="none">
+    <path d="M0 7 L10 7 M22 7 L32 7" stroke="#b08a3e" stroke-width="0.7"/>
+    <path d="M16 1 L19 7 L16 13 L13 7 Z" stroke="#b08a3e" stroke-width="0.7" fill="rgba(138,36,36,0.4)"/>
+  </svg>
+  <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gold-dim to-transparent opacity-50"></div>
+</div>
+
+<main class="max-w-[1440px] mx-auto px-10 pb-16 mt-8 grid grid-cols-12 gap-10">
+
+  <!-- LEFT: DOSSIER -->
+  <aside class="col-span-4 space-y-7">
+
+    <!-- Active Threads -->
+    <div class="gilded rounded-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display smallcaps text-sm gold-text">Active Threads</h3>
+        <span class="text-[10px] text-bone-dim italic">2 open</span>
+      </div>
+      <ul class="space-y-4">
+        <li class="border-l-2 border-blood pl-4">
+          <div class="font-script text-xl leading-tight">The Mirror's Reflection</div>
+          <div class="text-[11px] text-bone-dim mt-1 smallcaps">Opened 9 nights past · 4 visions inflicted</div>
+        </li>
+        <li class="border-l-2 border-gold-dim pl-4">
+          <div class="font-script text-xl leading-tight">Whispers in the Velvet</div>
+          <div class="text-[11px] text-bone-dim mt-1 smallcaps">Opened 3 nights past · 2 visions inflicted</div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Detected Symbols -->
+    <div class="gilded rounded-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display smallcaps text-sm gold-text">Recurring Symbols</h3>
+        <span class="text-[10px] text-bone-dim italic">divined by Zillah</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <span class="text-sm px-3 py-1 border border-gold-dim/40 rounded-sm text-bone-muted bg-ink-900/40">broken glass <span class="gold-text text-xs ml-1">7</span></span>
+        <span class="text-sm px-3 py-1 border border-gold-dim/40 rounded-sm text-bone-muted bg-ink-900/40">red moths <span class="gold-text text-xs ml-1">5</span></span>
+        <span class="text-sm px-3 py-1 border border-gold-dim/40 rounded-sm text-bone-muted bg-ink-900/40">the woman in white <span class="gold-text text-xs ml-1">4</span></span>
+        <span class="text-sm px-3 py-1 border border-gold-dim/40 rounded-sm text-bone-muted bg-ink-900/40">a closed door <span class="gold-text text-xs ml-1">3</span></span>
+        <span class="text-sm px-3 py-1 border border-gold-dim/40 rounded-sm text-bone-muted bg-ink-900/40">candlewax <span class="gold-text text-xs ml-1">3</span></span>
+        <span class="text-sm px-3 py-1 border border-gold-dim/40 rounded-sm text-bone-muted bg-ink-900/40">violin string <span class="gold-text text-xs ml-1">2</span></span>
+      </div>
+    </div>
+
+    <!-- Recent Visions -->
+    <div class="gilded rounded-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display smallcaps text-sm gold-text">From the Codex</h3>
+        <a class="text-[10px] smallcaps text-bone-dim hover:text-gold" href="#">Full History →</a>
+      </div>
+      <ul class="space-y-5">
+        <li class="border-l border-blood/50 pl-4">
+          <div class="flex items-baseline justify-between">
+            <span class="smallcaps text-[11px] text-blood-bright">Resonance Bleed</span>
+            <span class="text-[10px] text-bone-dim smallcaps">2 nights past</span>
+          </div>
+          <p class="font-serif text-bone-muted text-sm mt-1.5 italic leading-relaxed">
+            Velvet curtains stir though no window is open. From beneath them seeps the scent of jasmine and copper, and a sound like a violin string drawn slowly across bone…
+          </p>
+        </li>
+        <li class="border-l border-mauve pl-4">
+          <div class="flex items-baseline justify-between">
+            <span class="smallcaps text-[11px] text-bone-muted">Standard Vision</span>
+            <span class="text-[10px] text-bone-dim smallcaps">5 nights past</span>
+          </div>
+          <p class="font-serif text-bone-muted text-sm mt-1.5 italic leading-relaxed">
+            A hand you do not recognise sets a single red moth upon the rim of your glass. It does not burn though the candle is close. It watches.
+          </p>
+        </li>
+        <li class="border-l border-mauve pl-4">
+          <div class="flex items-baseline justify-between">
+            <span class="smallcaps text-[11px] text-bone-muted">The Warning</span>
+            <span class="text-[10px] text-bone-dim smallcaps">8 nights past</span>
+          </div>
+          <p class="font-serif text-bone-muted text-sm mt-1.5 italic leading-relaxed">
+            Do not return to the gallery on Calle Aviles. The painting you admire there has begun, lately, to admire you back.
+          </p>
+        </li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- RIGHT: EDITOR -->
+  <section class="col-span-8 space-y-6">
+
+    <div class="flex items-baseline justify-between">
+      <div>
+        <div class="smallcaps text-[11px] gold-text">Act V · Scene Three</div>
+        <h2 class="font-display text-4xl tracking-wide mt-1">Compose a Vision</h2>
+      </div>
+      <div class="text-right">
+        <div class="text-xs text-bone-dim italic">Draft auto-inscribed · moments ago</div>
+        <div class="smallcaps text-[10px] text-gold-dim mt-1">⌘S to save · ⌘↵ to inflict</div>
+      </div>
+    </div>
+
+    <!-- type chips -->
+    <div class="gilded rounded-sm p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="smallcaps text-[11px] gold-text">Nature of the Vision</p>
+        <span class="text-[10px] text-bone-dim italic">9 forms known to Auspex</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm">Standard Vision</button>
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm">Lucid Vision</button>
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm">Glitch Vision</button>
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm">Echo Vision</button>
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm" aria-selected="true">Resonance Bleed</button>
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm">Nightmare Bleed</button>
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm">The Witness</button>
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm">The Warning</button>
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm">Retrocognition Surge</button>
+      </div>
+    </div>
+
+    <!-- thread + meta -->
+    <div class="flex items-center gap-6 text-sm">
+      <div class="flex items-center gap-3">
+        <span class="smallcaps text-[11px] gold-text">Thread</span>
+        <select class="gilded-inset text-bone px-3 py-1.5 rounded-sm text-sm font-script">
+          <option>The Mirror's Reflection</option>
+          <option>Whispers in the Velvet</option>
+          <option>— unaligned —</option>
+          <option>+ open a new thread…</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="smallcaps text-[11px] gold-text">Tone</span>
+        <select class="gilded-inset text-bone px-3 py-1.5 rounded-sm text-sm font-script">
+          <option>Sensuous / Toreador</option>
+          <option>Ominous</option>
+          <option>Cryptic</option>
+          <option>Beautiful / cruel</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- editor -->
+    <div class="gilded frame-gold rounded-sm">
+      <div class="px-7 pt-5 pb-3 flex items-center justify-between text-xs text-bone-dim border-b rule">
+        <div class="flex items-center gap-4">
+          <span class="smallcaps gold-text">Vision Text</span>
+          <span class="italic">narrated to Lucien in second person</span>
+        </div>
+        <button class="hover:text-gold-bright smallcaps text-[11px] flex items-center gap-2">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1 L9.5 6.5 L15 8 L9.5 9.5 L8 15 L6.5 9.5 L1 8 L6.5 6.5 Z" fill="#b08a3e"/></svg>
+          Bid Claude to draft
+        </button>
+      </div>
+      <div class="px-8 py-7">
+        <textarea
+          class="vision-input font-serif text-lg dropcap"
+          rows="13"
+          placeholder="Begin the vision here. Draw from the Codex on the left…"
+        >The mirror behind the bar has, all evening, refused your reflection. You thought yourself amused by it. Now, as the last mortal patron rises to leave, you catch what fills your absence there: a woman in white, seated where you sit, raising your glass to lips you cannot see. She drinks. The wine within your real glass lowers, exactly the measure she has taken.</textarea>
+      </div>
+      <div class="px-7 py-3 border-t rule flex items-center justify-between text-xs text-bone-dim">
+        <div>
+          <span><span class="gold-text font-medium">487</span> characters</span>
+          <span class="dot"></span>
+          <span>≈ 22 seconds aloud</span>
+          <span class="dot"></span>
+          <span class="italic">2 symbols echoed: <span class="text-bone">mirror, woman in white</span></span>
+        </div>
+        <div class="italic">*italics* render in Discord</div>
+      </div>
+    </div>
+
+    <!-- actions -->
+    <div class="flex items-center justify-between pt-2">
+      <div class="flex items-center gap-3">
+        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">Save Draft</button>
+        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">Schedule for Sundown</button>
+        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">Preview in Discord</button>
+      </div>
+      <div class="flex items-center gap-5">
+        <span class="text-[11px] text-bone-dim italic">Once inflicted, the night cannot be unwritten.</span>
+        <button class="btn-send smallcaps text-xs px-7 py-3 rounded-sm tracking-widest font-medium">Inflict This Vision</button>
+      </div>
+    </div>
+
+    <!-- Drafts -->
+    <div class="gilded rounded-sm p-6 mt-4">
+      <div class="flex items-baseline justify-between mb-4">
+        <h3 class="font-display smallcaps text-sm gold-text">Drafts for Lucien</h3>
+        <span class="text-[10px] text-bone-dim italic">3 unsent</span>
+      </div>
+      <ul class="divide-y divide-ink-700">
+        <li class="py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm">
+          <div class="flex-1 pr-6">
+            <span class="smallcaps text-[11px] text-blood-bright mr-3">Resonance Bleed</span>
+            <span class="font-serif italic text-bone-muted">The mirror behind the bar has, all evening, refused your reflection…</span>
+          </div>
+          <span class="text-[10px] text-bone-dim smallcaps shrink-0">moments ago</span>
+        </li>
+        <li class="py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm">
+          <div class="flex-1 pr-6">
+            <span class="smallcaps text-[11px] text-bone-muted mr-3">The Witness</span>
+            <span class="font-serif italic text-bone-muted">Someone has been counting your nights. You feel it in the way the doorman…</span>
+          </div>
+          <span class="text-[10px] text-bone-dim smallcaps shrink-0">1 night past</span>
+        </li>
+        <li class="py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm">
+          <div class="flex-1 pr-6">
+            <span class="smallcaps text-[11px] text-bone-muted mr-3">Echo Vision</span>
+            <span class="font-serif italic text-bone-muted">The violinist at the Belmont plays a melody you remember from a salon in Florence…</span>
+          </div>
+          <span class="text-[10px] text-bone-dim smallcaps shrink-0">4 nights past</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="border-t rule mt-8">
+  <div class="max-w-[1440px] mx-auto px-10 py-5 flex items-center justify-between text-[11px] text-bone-dim">
+    <span class="smallcaps">Zillah · v0.2 mockup</span>
+    <svg width="60" height="14" viewBox="0 0 60 14" fill="none">
+      <path d="M0 7 L24 7 M36 7 L60 7" stroke="#b08a3e" stroke-width="0.6"/>
+      <path d="M30 1 L33 7 L30 13 L27 7 Z" stroke="#b08a3e" stroke-width="0.6" fill="rgba(138,36,36,0.4)"/>
+    </svg>
+    <span class="smallcaps">The night is long</span>
+  </div>
+</footer>
+
+</body>
+</html>
