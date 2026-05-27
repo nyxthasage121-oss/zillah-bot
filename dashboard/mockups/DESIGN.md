@@ -4,6 +4,9 @@ A portable reference for the look used in the v2 vision-editor mockup.
 Everything here is plain HTML/CSS + Tailwind via CDN; lift any piece into
 another project.
 
+> Pairs with **`dashboard/STACK.md`** (the architecture + Python/JS recipe).
+> This doc covers the visual half; that doc covers the structural half.
+
 ---
 
 ## 1 · Fonts
