@@ -1,0 +1,6 @@
+{# Render Hunger (max 5, diamond pips). caller passes `filled` and optional `max`. #}
+<div class="flex gap-1.5">
+  {% for i in range(max or 5) %}
+    <span class="pip{% if i < filled %} filled{% endif %}"></span>
+  {% endfor %}
+</div>

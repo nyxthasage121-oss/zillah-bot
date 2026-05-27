@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Zillah — Enter the Codex{% endblock %}
+
+{% block content %}
+<main class="max-w-[640px] mx-auto px-10 py-24">
+  <div class="gilded frame-gold rounded-sm p-12 text-center">
+    <div class="smallcaps text-[11px] gold-text mb-3">Storyteller's Codex</div>
+    <h1 class="font-display text-5xl tracking-wide mb-3">Zillah</h1>
+    <p class="font-script italic text-lg text-bone-muted">
+      The night is long. To compose visions for your Kindred, you must first
+      be admitted as a Storyteller of a known domain.
+    </p>
+    <div class="mt-10">
+      <a href="/auth/login" class="btn-send smallcaps text-xs px-7 py-3 rounded-sm tracking-widest font-medium inline-block">
+        Enter via Discord
+      </a>
+    </div>
+    <p class="mt-8 text-[11px] text-bone-dim italic">
+      Zillah will know you by your Storyteller role in the server.
+    </p>
+  </div>
+</main>
+{% endblock %}

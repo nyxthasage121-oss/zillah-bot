@@ -1,0 +1,6 @@
+{# Render a 10-dot meter (Humanity / Blood Potency). #}
+<div class="flex gap-1.5">
+  {% for i in range(max or 10) %}
+    <span class="hdot{% if i < filled %} filled{% endif %}"></span>
+  {% endfor %}
+</div>

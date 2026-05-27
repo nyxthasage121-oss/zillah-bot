@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{% block title %}Zillah — The Codex{% endblock %}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', path='/css/codex.css') }}">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:    { 950: '#0a0708', 900: '#120d0f', 850: '#171012', 800: '#1f1618', 700: '#2a1f22' },
+          bone:   { DEFAULT: '#ece4d6', muted: '#c9bfb0', dim: '#8b8275' },
+          blood:  { DEFAULT: '#8a2424', bright: '#b03030', deep: '#3a1418' },
+          gold:   { DEFAULT: '#b08a3e', bright: '#d4a94d', dim: '#7a5e29' },
+          mauve:  { DEFAULT: '#4a3d44', dim: '#352b30' },
+        },
+        fontFamily: {
+          display: ['"Cinzel"', 'serif'],
+          script:  ['"Cormorant Garamond"', 'serif'],
+          serif:   ['"EB Garamond"', 'serif'],
+          sans:    ['Inter', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+  }
+</script>
+{% block head_extra %}{% endblock %}
+</head>
+<body class="font-sans antialiased">
+
+{% include "_header.html" %}
+
+{% block content %}{% endblock %}
+
+{% include "_footer.html" %}
+
+<div id="toast">Saved</div>
+
+<script src="{{ url_for('static', path='/js/codex.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

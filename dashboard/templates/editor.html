@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% set active = 'kindred' %}
+{% block title %}Zillah — Compose for {{ k.base.name }}{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', path='/js/editor.js') }}"></script>{% endblock %}
+
+{% block content %}
+<div class="max-w-[1440px] mx-auto px-10 pt-6 text-[11px] smallcaps text-bone-dim">
+  <a href="/g/{{ guild.id }}/kindred" class="hover:text-gold">Kindred</a>
+  <span class="dot"></span>
+  <a href="/g/{{ guild.id }}/kindred" class="hover:text-gold">{{ k.base.name }}</a>
+  <span class="dot"></span>
+  <span class="gold-text">New Vision</span>
+</div>
+
+<!-- HERO BANNER -->
+<section class="max-w-[1440px] mx-auto px-10 mt-4">
+  <div class="gilded frame-gold rounded-sm overflow-hidden">
+    <div class="relative px-10 py-8" style="background-image: radial-gradient(circle at 85% 50%, rgba(138,36,36,0.18), transparent 50%), radial-gradient(circle at 10% 100%, rgba(176,138,62,0.08), transparent 60%);">
+      <div class="absolute top-6 right-10 opacity-30">
+        {% with clan=k.base.clan, size=120 %}{% include "_clan_sigil.html" %}{% endwith %}
+      </div>
+
+      <div class="relative">
+        <div class="smallcaps text-xs gold-text mb-2">Clan {{ clan_labels[k.base.clan] }} · {{ k.base.generation }}th Generation · {{ k.sect }}</div>
+        <h1 class="font-display text-5xl tracking-wide mb-1">{{ k.base.name }}</h1>
+        <p class="font-script italic text-lg text-bone-muted mt-1">"{{ k.base.epithet }}" · Embraced {{ k.embraced }} · sired by {{ k.sire }}</p>
+
+        <div class="mt-7 flex flex-wrap items-end gap-10">
+          <div>
+            <div class="smallcaps text-[10px] text-bone-dim mb-2">Hunger</div>
+            {% with filled=k.base.hunger, max=5 %}{% include "_pips.html" %}{% endwith %}
+          </div>
+          <div>
+            <div class="smallcaps text-[10px] text-bone-dim mb-2">Humanity · {{ k.base.humanity }}</div>
+            {% with filled=k.base.humanity, max=10 %}{% include "_dots.html" %}{% endwith %}
+          </div>
+          <div>
+            <div class="smallcaps text-[10px] text-bone-dim mb-2">Blood Potency · {{ k.base.blood_potency }}</div>
+            {% with filled=k.base.blood_potency, max=10 %}{% include "_dots.html" %}{% endwith %}
+          </div>
+          <div class="border-l rule pl-10 ml-2">
+            <div class="smallcaps text-[10px] text-bone-dim mb-2">Discipline</div>
+            <div class="font-script text-base text-bone-muted italic">{{ k.discipline_label }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ornamental divider -->
+<div class="max-w-[1440px] mx-auto px-10 mt-8 flex items-center gap-4">
+  <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gold-dim to-transparent opacity-50"></div>
+  <svg width="32" height="14" viewBox="0 0 32 14" fill="none">
+    <path d="M0 7 L10 7 M22 7 L32 7" stroke="#b08a3e" stroke-width="0.7"/>
+    <path d="M16 1 L19 7 L16 13 L13 7 Z" stroke="#b08a3e" stroke-width="0.7" fill="rgba(138,36,36,0.4)"/>
+  </svg>
+  <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gold-dim to-transparent opacity-50"></div>
+</div>
+
+<main class="max-w-[1440px] mx-auto px-10 pb-16 mt-8 grid grid-cols-12 gap-10">
+
+  <!-- LEFT: DOSSIER -->
+  <aside class="col-span-4 space-y-7">
+
+    <div class="gilded rounded-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display smallcaps text-sm gold-text">Active Threads</h3>
+        <span class="text-[10px] text-bone-dim italic">{{ k.threads|length }} open</span>
+      </div>
+      {% if k.threads %}
+      <ul class="space-y-4">
+        {% for t in k.threads %}
+        <li class="border-l-2 {% if t.is_primary %}border-blood{% else %}border-gold-dim{% endif %} pl-4">
+          <div class="font-script text-xl leading-tight">{{ t.title }}</div>
+          <div class="text-[11px] text-bone-dim mt-1 smallcaps">Opened {{ t.when_opened }} · {{ t.visions_count }} vision{{ t.visions_count != 1 and 's' or '' }} inflicted</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="font-script italic text-bone-dim text-sm">No threads yet open. The first vision will begin one.</p>
+      {% endif %}
+    </div>
+
+    <div class="gilded rounded-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display smallcaps text-sm gold-text">Recurring Symbols</h3>
+        <span class="text-[10px] text-bone-dim italic">divined by Zillah</span>
+      </div>
+      {% if k.symbols %}
+      <div class="flex flex-wrap gap-2">
+        {% for s in k.symbols %}
+        <span class="text-sm px-3 py-1 border border-gold-dim/40 rounded-sm text-bone-muted bg-ink-900/40">{{ s.name }} <span class="gold-text text-xs ml-1">{{ s.count }}</span></span>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="font-script italic text-bone-dim text-sm">No motifs have surfaced yet.</p>
+      {% endif %}
+    </div>
+
+    <div class="gilded rounded-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display smallcaps text-sm gold-text">From the Codex</h3>
+        <a class="text-[10px] smallcaps text-bone-dim hover:text-gold" href="#" data-toast="Full history — not yet wired">Full History →</a>
+      </div>
+      {% if k.recent_visions %}
+      <ul class="space-y-5">
+        {% for v in k.recent_visions %}
+        <li class="border-l {% if 'Bleed' in v.type %}border-blood/50{% else %}border-mauve{% endif %} pl-4">
+          <div class="flex items-baseline justify-between">
+            <span class="smallcaps text-[11px] {% if 'Bleed' in v.type %}text-blood-bright{% else %}text-bone-muted{% endif %}">{{ v.type }}</span>
+            <span class="text-[10px] text-bone-dim smallcaps">{{ v.when }}</span>
+          </div>
+          <p class="font-serif text-bone-muted text-sm mt-1.5 italic leading-relaxed">{{ v.body }}</p>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="font-script italic text-bone-dim text-sm">No visions inflicted yet.</p>
+      {% endif %}
+    </div>
+  </aside>
+
+  <!-- RIGHT: EDITOR -->
+  <section class="col-span-8 space-y-6">
+
+    <div class="flex items-baseline justify-between">
+      <div>
+        <div class="smallcaps text-[11px] gold-text">Act of Auspex</div>
+        <h2 class="font-display text-4xl tracking-wide mt-1">Compose a Vision</h2>
+      </div>
+      <div class="text-right">
+        <div class="text-xs text-bone-dim italic" data-save-indicator>Draft auto-inscribed · moments ago</div>
+        <div class="smallcaps text-[10px] text-gold-dim mt-1">⌘S to save · ⌘↵ to inflict</div>
+      </div>
+    </div>
+
+    <div class="gilded rounded-sm p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="smallcaps text-[11px] gold-text">Nature of the Vision</p>
+        <span class="text-[10px] text-bone-dim italic">9 forms known to Auspex</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {% for vt in vision_types %}
+        <button class="chip smallcaps text-[11px] px-3 py-2 rounded-sm"{% if loop.first %} aria-selected="true"{% endif %}>{{ vt }}</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="flex items-center gap-6 text-sm">
+      <div class="flex items-center gap-3">
+        <span class="smallcaps text-[11px] gold-text">Thread</span>
+        <select class="gilded-inset text-bone px-3 py-1.5 rounded-sm text-sm font-script">
+          {% for t in k.threads %}
+            <option>{{ t.title }}</option>
+          {% endfor %}
+          <option>— unaligned —</option>
+          <option>+ open a new thread…</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="smallcaps text-[11px] gold-text">Tone</span>
+        <select class="gilded-inset text-bone px-3 py-1.5 rounded-sm text-sm font-script">
+          <option>Sensuous</option>
+          <option>Ominous</option>
+          <option>Cryptic</option>
+          <option>Beautiful / cruel</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="gilded frame-gold rounded-sm">
+      <div class="px-7 pt-5 pb-3 flex items-center justify-between text-xs text-bone-dim border-b rule">
+        <div class="flex items-center gap-4">
+          <span class="smallcaps gold-text">Vision Text</span>
+          <span class="italic">narrated to {{ k.base.name.split(' ')[0] }} in second person</span>
+        </div>
+        <button class="hover:text-gold-bright smallcaps text-[11px] flex items-center gap-2">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1 L9.5 6.5 L15 8 L9.5 9.5 L8 15 L6.5 9.5 L1 8 L6.5 6.5 Z" fill="#b08a3e"/></svg>
+          Bid Claude to draft
+        </button>
+      </div>
+      <div class="px-8 py-7">
+        <textarea
+          class="vision-input font-serif text-lg dropcap"
+          rows="13"
+          placeholder="Begin the vision here. Draw from the Codex on the left…"></textarea>
+      </div>
+      <div class="px-7 py-3 border-t rule flex items-center justify-between text-xs text-bone-dim">
+        <div>
+          <span><span class="gold-text font-medium">0</span> characters</span>
+          <span class="dot"></span>
+          <span>≈ 0 seconds aloud</span>
+        </div>
+        <div class="italic">*italics* render in Discord</div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between pt-2">
+      <div class="flex items-center gap-3">
+        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">Save Draft</button>
+        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">Schedule for Sundown</button>
+        <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">Preview in Discord</button>
+      </div>
+      <div class="flex items-center gap-5">
+        <span class="text-[11px] text-bone-dim italic">Once inflicted, the night cannot be unwritten.</span>
+        <button class="btn-send smallcaps text-xs px-7 py-3 rounded-sm tracking-widest font-medium">Inflict This Vision</button>
+      </div>
+    </div>
+
+    <div class="gilded rounded-sm p-6 mt-4">
+      <div class="flex items-baseline justify-between mb-4">
+        <h3 class="font-display smallcaps text-sm gold-text">Drafts for {{ k.base.name.split(' ')[0] }}</h3>
+        <span class="text-[10px] text-bone-dim italic">{{ k.drafts|length }} unsent</span>
+      </div>
+      {% if k.drafts %}
+      <ul class="divide-y divide-ink-700" id="drafts-list">
+        {% for d in k.drafts %}
+        <li class="draft-row py-3 flex items-baseline justify-between hover:bg-blood-deep/10 px-2 -mx-2 cursor-pointer rounded-sm"
+            data-type="{{ d.type }}"
+            data-body="{{ d.body }}">
+          <div class="flex-1 pr-6">
+            <span class="smallcaps text-[11px] {% if 'Bleed' in d.type %}text-blood-bright{% else %}text-bone-muted{% endif %} mr-3">{{ d.type }}</span>
+            <span class="font-serif italic text-bone-muted">{{ d.body[:96] }}{% if d.body|length > 96 %}…{% endif %}</span>
+          </div>
+          <span class="text-[10px] text-bone-dim smallcaps shrink-0">{{ d.when }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="font-script italic text-bone-dim text-sm">No drafts in the Codex yet.</p>
+      {% endif %}
+    </div>
+  </section>
+</main>
+
+<!-- Confirm modal -->
+<div id="modal-backdrop">
+  <div id="modal">
+    <div class="smallcaps text-[10px] gold-text mb-2">Confirm the Working</div>
+    <h3 class="font-display text-3xl tracking-wide mb-3">Inflict this vision?</h3>
+    <p class="font-serif text-bone-muted italic leading-relaxed mb-6">
+      Once delivered to {{ k.base.name }}, the vision becomes part of the chronicle.
+      The night cannot be unwritten, and the Codex will remember.
+    </p>
+    <div class="flex items-center justify-end gap-3">
+      <button id="modal-cancel" class="btn-ghost smallcaps text-[11px] px-5 py-2.5 rounded-sm">Withdraw</button>
+      <button id="modal-confirm" class="btn-send smallcaps text-xs px-6 py-2.5 rounded-sm tracking-widest font-medium">Yes, inflict it</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
