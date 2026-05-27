@@ -7,7 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Pips, Dots } from "@/components/pips";
 import { ClanSigil } from "@/components/clan-sigil";
 import { VisionEditor } from "@/components/vision-editor";
-import { CLAN_LABEL, getKindred } from "@/lib/mock-data";
+import { CLAN_LABEL, getKindred, ROSTER } from "@/lib/mock-data";
+
+export function generateStaticParams() {
+  return ROSTER.map(k => ({ id: k.id }));
+}
 
 export default function EditorPage({ params }: { params: { id: string } }) {
   const k = getKindred(params.id);
