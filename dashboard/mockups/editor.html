@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zillah — Compose Vision</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:    { 950: '#0e0c0d', 900: '#171314', 800: '#1f1a1b', 700: '#2a2325' },
+          bone:   { DEFAULT: '#e8e0d3', muted: '#c9bfb0', dim: '#8b8275' },
+          blood:  { DEFAULT: '#7a1f1f', bright: '#a32b2b', deep: '#511515' },
+          mauve:  { DEFAULT: '#4a3d44', dim: '#352b30' },
+        },
+        fontFamily: {
+          display: ['"Cormorant Garamond"', 'serif'],
+          serif:   ['"EB Garamond"', 'serif'],
+          sans:    ['Inter', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    background-color: #0e0c0d;
+    color: #e8e0d3;
+  }
+  /* film grain */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  /* hairline */
+  .rule { border-color: #2a2325; }
+  /* small caps utility */
+  .smallcaps {
+    font-variant: all-small-caps;
+    letter-spacing: 0.12em;
+  }
+  /* vision type chip */
+  .chip {
+    border: 1px solid #2a2325;
+    color: #c9bfb0;
+    background: transparent;
+    transition: all .15s ease;
+  }
+  .chip:hover { border-color: #4a3d44; color: #e8e0d3; }
+  .chip[aria-selected="true"] {
+    border-color: #7a1f1f;
+    color: #e8e0d3;
+    background: rgba(122, 31, 31, 0.08);
+  }
+  /* editor textarea look */
+  .vision-input {
+    background: transparent;
+    color: #e8e0d3;
+    outline: none;
+    resize: none;
+    width: 100%;
+    line-height: 1.7;
+  }
+  .vision-input::placeholder { color: #5e544a; font-style: italic; }
+  /* subtle dot for separators */
+  .dot::before { content: "·"; margin: 0 0.5rem; color: #4a3d44; }
+  /* send button */
+  .btn-send {
+    background: #7a1f1f;
+    color: #f5ede0;
+    border: 1px solid #a32b2b;
+    transition: all .15s ease;
+  }
+  .btn-send:hover { background: #a32b2b; }
+  .btn-ghost {
+    border: 1px solid #2a2325;
+    color: #c9bfb0;
+    transition: all .15s ease;
+  }
+  .btn-ghost:hover { border-color: #4a3d44; color: #e8e0d3; }
+  /* sigil ornament */
+  .sigil {
+    font-family: serif;
+    color: #4a3d44;
+    user-select: none;
+  }
+</style>
+</head>
+<body class="font-sans antialiased">
+
+<!-- top bar -->
+<header class="border-b rule">
+  <div class="max-w-[1400px] mx-auto px-8 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="sigil text-xl">❦</span>
+      <span class="font-display text-xl tracking-wide">Zillah</span>
+      <span class="text-bone-dim text-xs smallcaps ml-2">Elysium · St. Augustine by Night</span>
+    </div>
+    <nav class="flex items-center gap-6 text-sm text-bone-muted">
+      <a class="hover:text-bone" href="#">Players</a>
+      <a class="hover:text-bone" href="#">Drafts <span class="text-bone-dim">(3)</span></a>
+      <a class="hover:text-bone" href="#">Threads</a>
+      <a class="hover:text-bone" href="#">Settings</a>
+      <span class="w-px h-4 bg-ink-700"></span>
+      <span class="text-bone-dim">storyteller_amelia</span>
+    </nav>
+  </div>
+</header>
+
+<!-- breadcrumb -->
+<div class="max-w-[1400px] mx-auto px-8 pt-6 pb-2 text-xs smallcaps text-bone-dim">
+  Players <span class="dot"></span> Lucien Marchetti <span class="dot"></span> New Vision
+</div>
+
+<main class="max-w-[1400px] mx-auto px-8 pb-16 grid grid-cols-12 gap-10">
+
+  <!-- LEFT: PLAYER DOSSIER -->
+  <aside class="col-span-4">
+    <div class="pt-2">
+      <p class="smallcaps text-bone-dim text-xs">Toreador · 8th Generation</p>
+      <h1 class="font-display text-4xl mt-1 mb-1 leading-tight">Lucien Marchetti</h1>
+      <p class="text-bone-muted text-sm italic">Embraced 1894 · The Rose of the Ponte Vecchio</p>
+    </div>
+
+    <div class="mt-8 border-t rule pt-6">
+      <p class="smallcaps text-bone-dim text-xs mb-3">Active Threads</p>
+      <ul class="space-y-3">
+        <li>
+          <div class="font-display text-lg leading-snug">The Mirror's Reflection</div>
+          <div class="text-xs text-bone-dim mt-0.5">Opened nine nights ago · 4 visions</div>
+        </li>
+        <li>
+          <div class="font-display text-lg leading-snug">Whispers in the Velvet</div>
+          <div class="text-xs text-bone-dim mt-0.5">Opened three nights ago · 2 visions</div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="mt-8 border-t rule pt-6">
+      <p class="smallcaps text-bone-dim text-xs mb-3">Detected Symbols</p>
+      <div class="flex flex-wrap gap-2">
+        <span class="text-sm px-2.5 py-1 border rule rounded-sm text-bone-muted">broken glass</span>
+        <span class="text-sm px-2.5 py-1 border rule rounded-sm text-bone-muted">red moths</span>
+        <span class="text-sm px-2.5 py-1 border rule rounded-sm text-bone-muted">the woman in white</span>
+        <span class="text-sm px-2.5 py-1 border rule rounded-sm text-bone-muted">a closed door</span>
+        <span class="text-sm px-2.5 py-1 border rule rounded-sm text-bone-muted">candlewax</span>
+      </div>
+    </div>
+
+    <div class="mt-8 border-t rule pt-6">
+      <p class="smallcaps text-bone-dim text-xs mb-3">Recent Visions</p>
+      <ul class="space-y-4">
+        <li>
+          <div class="flex items-baseline justify-between">
+            <span class="smallcaps text-xs text-blood-bright">Resonance Bleed</span>
+            <span class="text-xs text-bone-dim">two nights ago</span>
+          </div>
+          <p class="font-serif text-bone-muted text-sm mt-1 italic line-clamp-2">
+            Velvet curtains stir though no window is open. From beneath them seeps the scent of jasmine and copper, and a sound like a violin string drawn slowly across bone…
+          </p>
+        </li>
+        <li>
+          <div class="flex items-baseline justify-between">
+            <span class="smallcaps text-xs text-bone-muted">Standard Vision</span>
+            <span class="text-xs text-bone-dim">five nights ago</span>
+          </div>
+          <p class="font-serif text-bone-muted text-sm mt-1 italic line-clamp-2">
+            A hand you do not recognise sets a single red moth upon the rim of your glass. It does not burn though the candle is close. It watches.
+          </p>
+        </li>
+        <li>
+          <div class="flex items-baseline justify-between">
+            <span class="smallcaps text-xs text-bone-muted">The Warning</span>
+            <span class="text-xs text-bone-dim">eight nights ago</span>
+          </div>
+          <p class="font-serif text-bone-muted text-sm mt-1 italic line-clamp-2">
+            Do not return to the gallery on Calle Aviles. The painting you admire there has begun, lately, to admire you back.
+          </p>
+        </li>
+      </ul>
+      <button class="mt-4 text-xs smallcaps text-bone-dim hover:text-bone">View full history →</button>
+    </div>
+  </aside>
+
+  <!-- RIGHT: EDITOR -->
+  <section class="col-span-8">
+    <div class="flex items-baseline justify-between pt-2">
+      <h2 class="font-display text-3xl">Compose a Vision</h2>
+      <span class="text-xs text-bone-dim italic">Draft auto-saved · moments ago</span>
+    </div>
+
+    <!-- vision type chips -->
+    <div class="mt-6">
+      <p class="smallcaps text-xs text-bone-dim mb-3">Type of Vision</p>
+      <div class="flex flex-wrap gap-2">
+        <button class="chip smallcaps text-xs px-3 py-2 rounded-sm">Standard Vision</button>
+        <button class="chip smallcaps text-xs px-3 py-2 rounded-sm">Lucid Vision</button>
+        <button class="chip smallcaps text-xs px-3 py-2 rounded-sm">Glitch Vision</button>
+        <button class="chip smallcaps text-xs px-3 py-2 rounded-sm">Echo Vision</button>
+        <button class="chip smallcaps text-xs px-3 py-2 rounded-sm" aria-selected="true">Resonance Bleed</button>
+        <button class="chip smallcaps text-xs px-3 py-2 rounded-sm">Nightmare Bleed</button>
+        <button class="chip smallcaps text-xs px-3 py-2 rounded-sm">The Witness</button>
+        <button class="chip smallcaps text-xs px-3 py-2 rounded-sm">The Warning</button>
+        <button class="chip smallcaps text-xs px-3 py-2 rounded-sm">Retrocognition Surge</button>
+      </div>
+    </div>
+
+    <!-- thread association -->
+    <div class="mt-6 flex items-center gap-3 text-sm">
+      <span class="smallcaps text-xs text-bone-dim">Thread</span>
+      <select class="bg-ink-900 border rule text-bone px-3 py-1.5 rounded-sm text-sm">
+        <option>The Mirror's Reflection</option>
+        <option>Whispers in the Velvet</option>
+        <option>— unaligned —</option>
+        <option>+ open a new thread…</option>
+      </select>
+    </div>
+
+    <!-- editor card -->
+    <div class="mt-6 border rule bg-ink-900/60 rounded-sm">
+      <div class="px-6 pt-5 pb-3 flex items-center justify-between text-xs text-bone-dim border-b rule">
+        <div class="flex items-center gap-4">
+          <span class="smallcaps">Vision Text</span>
+          <span class="italic">narrated to Lucien in second person</span>
+        </div>
+        <button class="hover:text-bone smallcaps">✦ Ask Claude to draft</button>
+      </div>
+      <div class="px-6 py-6">
+        <textarea
+          class="vision-input font-serif text-lg"
+          rows="14"
+          placeholder="Begin the vision here. Pull from the dossier on the left — the red moths, the woman in white, the velvet that stirs when no window is open…"
+        >The mirror behind the bar has, all evening, refused your reflection. You thought yourself amused by it. Now, as the last mortal patron rises to leave, you catch what fills your absence there: a woman in white, seated where you sit, raising your glass to lips you cannot see. She drinks. The wine within your real glass lowers, exactly the measure she has taken.</textarea>
+      </div>
+      <div class="px-6 py-3 border-t rule flex items-center justify-between text-xs text-bone-dim">
+        <div>
+          <span>487 characters</span>
+          <span class="dot"></span>
+          <span>≈ 22 seconds to read aloud</span>
+        </div>
+        <div class="italic">Markdown supported · *italics* render in Discord</div>
+      </div>
+    </div>
+
+    <!-- action row -->
+    <div class="mt-6 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <button class="btn-ghost smallcaps text-xs px-4 py-2.5 rounded-sm">Save Draft</button>
+        <button class="btn-ghost smallcaps text-xs px-4 py-2.5 rounded-sm">Schedule for Sundown</button>
+        <button class="btn-ghost smallcaps text-xs px-4 py-2.5 rounded-sm">Preview in Discord</button>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="text-xs text-bone-dim italic">This action cannot be undone.</span>
+        <button class="btn-send smallcaps text-xs px-6 py-2.5 rounded-sm">Inflict This Vision</button>
+      </div>
+    </div>
+
+    <!-- drafts strip -->
+    <div class="mt-12 border-t rule pt-6">
+      <div class="flex items-baseline justify-between mb-3">
+        <p class="smallcaps text-xs text-bone-dim">Drafts for Lucien</p>
+        <span class="text-xs text-bone-dim">3 unsent</span>
+      </div>
+      <ul class="divide-y divide-ink-700">
+        <li class="py-3 flex items-baseline justify-between hover:bg-ink-900/50 px-2 -mx-2 cursor-pointer">
+          <div>
+            <span class="smallcaps text-xs text-blood-bright mr-3">Resonance Bleed</span>
+            <span class="font-serif italic text-bone-muted">The mirror behind the bar has, all evening, refused your reflection…</span>
+          </div>
+          <span class="text-xs text-bone-dim">moments ago</span>
+        </li>
+        <li class="py-3 flex items-baseline justify-between hover:bg-ink-900/50 px-2 -mx-2 cursor-pointer">
+          <div>
+            <span class="smallcaps text-xs text-bone-muted mr-3">The Witness</span>
+            <span class="font-serif italic text-bone-muted">Someone has been counting your nights. You feel it in the way the doorman…</span>
+          </div>
+          <span class="text-xs text-bone-dim">one night ago</span>
+        </li>
+        <li class="py-3 flex items-baseline justify-between hover:bg-ink-900/50 px-2 -mx-2 cursor-pointer">
+          <div>
+            <span class="smallcaps text-xs text-bone-muted mr-3">Echo Vision</span>
+            <span class="font-serif italic text-bone-muted">The violinist at the Belmont plays a melody you remember from a salon…</span>
+          </div>
+          <span class="text-xs text-bone-dim">four nights ago</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="border-t rule mt-8">
+  <div class="max-w-[1400px] mx-auto px-8 py-4 flex items-center justify-between text-xs text-bone-dim">
+    <span>Zillah · the night is long</span>
+    <span class="sigil text-base">✦ ❦ ✦</span>
+    <span>v0.1 mockup · not yet wired</span>
+  </div>
+</footer>
+
+</body>
+</html>
