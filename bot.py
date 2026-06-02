@@ -30,13 +30,19 @@ def create_bot() -> tuple[discord.Client, app_commands.CommandTree]:
     @bot.event
     async def on_ready() -> None:
         db.setup_database()
-        await tree.sync()
+        # Guard tree.sync() to only run once on initial startup. discord.py
+        # fires on_ready on every reconnect; each tree.sync() is a heavy
+        # PUT-per-guild that, accumulated, can trip Cloudflare's 1015
+        # IP-level rate limit on discord.com.
+        if not getattr(bot, "_synced", False):
+            await tree.sync()
+            bot._synced = True
         # Spawn the outbox worker once, on first ready. Subsequent ready events
         # (after a reconnect) shouldn't start a second copy.
         if not getattr(bot, "_outbox_started", False):
             asyncio.create_task(outbox_worker.run(bot))
             bot._outbox_started = True
-        logger.info("Zillah is online. Logged in as %s. Commands synced.", bot.user)
+        logger.info("Zillah is online. Logged in as %s.", bot.user)
 
     @bot.event
     async def on_guild_join(guild: discord.Guild) -> None:
