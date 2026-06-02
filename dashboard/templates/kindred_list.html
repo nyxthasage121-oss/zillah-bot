@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% set active = 'kindred' %}
+{% block title %}Zillah — The Kindred · {{ guild.name }}{% endblock %}
+
+{% block content %}
+<main class="max-w-[1440px] mx-auto px-10 py-10" x-data="kindredRoster()">
+
+  <div class="flex items-end justify-between mb-2">
+    <div>
+      <div class="smallcaps text-[11px] gold-text">Domain Roster</div>
+      <h1 class="font-display text-5xl tracking-wide mt-1">The Kindred</h1>
+      <p class="font-script italic text-bone-muted mt-2 text-lg">
+        {{ roster|length }} soul{{ roster|length != 1 and 's' or '' }} inscribed in your chronicle
+      </p>
+      <p class="marginalia mt-2">~ from the keeper's ledger ~</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <input type="search" placeholder="Search by name, clan, sire…"
+             x-model="query" @input.debounce.150ms="apply()"
+             class="bg-ink-900 border rule text-bone px-4 py-2.5 rounded-sm text-sm font-serif w-72 placeholder:italic placeholder:text-bone-dim focus:border-gold-dim focus:outline-none">
+      <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm"
+              @click="$store.toast.show('New Kindred form — not yet wired')">+ New Kindred</button>
+    </div>
+  </div>
+
+  {% set tallies = {} %}
+  {% for k in roster %}
+    {% if tallies.update({k.clan: tallies.get(k.clan, 0) + 1}) %}{% endif %}
+  {% endfor %}
+
+  <div class="flex items-center gap-2 mt-6 mb-8 flex-wrap">
+    <span class="smallcaps text-[10px] text-bone-dim mr-3">Filter by clan</span>
+    <button class="btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm"
+            :class="{ 'filter-active': clan === 'all' }"
+            @click="clan = 'all'; apply()">All · {{ roster|length }}</button>
+    {% for clan_key, label in clan_labels.items() %}
+      {% if tallies.get(clan_key) %}
+      <button class="btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm"
+              :class="{ 'filter-active': clan === '{{ clan_key }}' }"
+              @click="clan = '{{ clan_key }}'; apply()">{{ label }} · {{ tallies.get(clan_key) }}</button>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="grid grid-cols-3 gap-6" id="grid">
+    {% for k in roster %}
+    <a class="kindred-card" data-clan="{{ k.clan }}" href="/g/{{ guild.id }}/kindred/{{ k.user_id }}/edit">
+      <div class="gilded rounded-sm p-6">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="smallcaps text-[10px] clan-{{ k.clan }}">{{ clan_labels[k.clan] }} · {{ k.generation }}th Gen</div>
+            <h3 class="font-display text-2xl tracking-wide mt-1">{{ k.name }}</h3>
+            <p class="font-script italic text-bone-muted text-sm mt-1">{{ k.epithet }}</p>
+          </div>
+          {% with clan=k.clan, size=32 %}{% include "_clan_sigil.html" %}{% endwith %}
+        </div>
+        <div class="mt-5 pt-4 border-t rule grid grid-cols-2 gap-3 text-[10px] smallcaps text-bone-dim">
+          <div>
+            <div class="mb-1">Hunger</div>
+            {% with filled=k.hunger, max=5 %}{% include "_pips.html" %}{% endwith %}
+          </div>
+          <div>
+            <div class="mb-1">Humanity · {{ k.humanity }}</div>
+            {% with filled=k.humanity, max=10 %}{% include "_dots.html" %}{% endwith %}
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t rule text-[11px] text-bone-muted leading-relaxed">
+          <div class="flex items-baseline justify-between">
+            <span class="italic">Last vision · {{ k.last_vision_when }}</span>
+            <span class="smallcaps text-[10px] {% if 'Bleed' in k.last_vision_type %}text-blood-bright{% else %}text-bone-muted{% endif %}">{{ k.last_vision_type }}</span>
+          </div>
+          <div class="mt-2 italic">
+            {{ k.threads_count }} active thread{{ k.threads_count != 1 and 's' or '' }}
+            ·
+            {% if k.drafts_count %}{{ k.drafts_count }} unsent draft{{ k.drafts_count != 1 and 's' or '' }}{% else %}no drafts{% endif %}
+          </div>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</main>
+{% endblock %}

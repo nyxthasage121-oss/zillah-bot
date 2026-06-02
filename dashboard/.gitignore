@@ -1,0 +1,3 @@
+node_modules/
+# tailwind.css and vendor/ are compiled artifacts checked in to keep
+# deploys from needing npm. Re-run `npm run build` after template changes.

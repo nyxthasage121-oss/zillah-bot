@@ -131,6 +131,39 @@ def setup_database() -> None:
         )
     """)
 
+    # Dashboard tables: STs compose visions in the web Codex; drafts persist
+    # until inflicted, and an outbox decouples the web process from the bot
+    # process for actually delivering visions to Discord.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS vision_drafts (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id        TEXT NOT NULL,
+            player_user_id  TEXT NOT NULL,
+            st_user_id      TEXT NOT NULL,
+            vision_type     TEXT NOT NULL,
+            body            TEXT NOT NULL,
+            created_at      TEXT NOT NULL,
+            updated_at      TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_drafts_player ON vision_drafts(guild_id, player_user_id)")
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS vision_outbox (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id        TEXT NOT NULL,
+            player_user_id  TEXT NOT NULL,
+            st_user_id      TEXT NOT NULL,
+            vision_type     TEXT NOT NULL,
+            body            TEXT NOT NULL,
+            status          TEXT NOT NULL DEFAULT 'pending',
+            created_at      TEXT NOT NULL,
+            sent_at         TEXT,
+            error           TEXT
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_outbox_pending ON vision_outbox(status, created_at)")
+
     conn.commit()
     logger.info("Database ready.")
 
@@ -525,5 +558,171 @@ def clear_detected_symbols(guild_id: str, user_id: str) -> None:
     conn.execute(
         "DELETE FROM detected_symbols WHERE guild_id = ? AND user_id = ?",
         (guild_id, user_id),
+    )
+    conn.commit()
+
+
+# ── vision_drafts ─────────────────────────────────────────────────────────────
+
+@_with_reconnect
+def create_draft(
+    guild_id: str,
+    player_user_id: str,
+    st_user_id: str,
+    vision_type: str,
+    body: str,
+    now_iso: str,
+) -> int:
+    conn = get_db()
+    cur = conn.execute(
+        "INSERT INTO vision_drafts "
+        "(guild_id, player_user_id, st_user_id, vision_type, body, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (guild_id, player_user_id, st_user_id, vision_type, body, now_iso, now_iso),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+@_with_reconnect
+def update_draft(draft_id: int, vision_type: str, body: str, now_iso: str) -> None:
+    conn = get_db()
+    conn.execute(
+        "UPDATE vision_drafts SET vision_type = ?, body = ?, updated_at = ? WHERE id = ?",
+        (vision_type, body, now_iso, draft_id),
+    )
+    conn.commit()
+
+
+@_with_reconnect
+def delete_draft(draft_id: int) -> None:
+    conn = get_db()
+    conn.execute("DELETE FROM vision_drafts WHERE id = ?", (draft_id,))
+    conn.commit()
+
+
+@_with_reconnect
+def list_drafts_for_player(guild_id: str, player_user_id: str) -> list[dict]:
+    rows = get_db().execute(
+        "SELECT id, vision_type, body, updated_at FROM vision_drafts "
+        "WHERE guild_id = ? AND player_user_id = ? ORDER BY updated_at DESC",
+        (guild_id, player_user_id),
+    ).fetchall()
+    return [{"id": r[0], "vision_type": r[1], "body": r[2], "updated_at": r[3]} for r in rows]
+
+
+@_with_reconnect
+def get_draft(draft_id: int) -> dict | None:
+    r = get_db().execute(
+        "SELECT id, guild_id, player_user_id, st_user_id, vision_type, body, updated_at "
+        "FROM vision_drafts WHERE id = ?",
+        (draft_id,),
+    ).fetchone()
+    if not r:
+        return None
+    return {
+        "id": r[0], "guild_id": r[1], "player_user_id": r[2], "st_user_id": r[3],
+        "vision_type": r[4], "body": r[5], "updated_at": r[6],
+    }
+
+
+# ── aggregations for the dashboard ──────────────────────────────────────────
+
+@_with_reconnect
+def get_roster_aggregates(guild_id: str, user_ids: list[str]) -> dict[str, dict]:
+    """For each user_id in the list, return aggregate stats:
+        { last_vision_type, last_vision_when, threads_count, drafts_count }
+    Users with no activity are absent from the returned dict.
+    """
+    if not user_ids:
+        return {}
+
+    placeholders = ",".join("?" * len(user_ids))
+    out: dict[str, dict] = {}
+
+    # Last vision per user: filter to the max-id row per (guild, user).
+    for row in get_db().execute(
+        f"SELECT user_id, vision_type, timestamp FROM vision_history "
+        f"WHERE guild_id = ? AND user_id IN ({placeholders}) "
+        f"AND id IN (SELECT MAX(id) FROM vision_history WHERE guild_id = ? "
+        f"AND user_id IN ({placeholders}) GROUP BY user_id)",
+        [guild_id, *user_ids, guild_id, *user_ids],
+    ).fetchall():
+        out.setdefault(row[0], {})
+        out[row[0]]["last_vision_type"] = row[1]
+        out[row[0]]["last_vision_when"] = row[2]
+
+    for row in get_db().execute(
+        f"SELECT user_id, COUNT(*) FROM vision_threads "
+        f"WHERE guild_id = ? AND user_id IN ({placeholders}) AND is_active = 1 "
+        f"GROUP BY user_id",
+        [guild_id, *user_ids],
+    ).fetchall():
+        out.setdefault(row[0], {})["threads_count"] = row[1]
+
+    for row in get_db().execute(
+        f"SELECT player_user_id, COUNT(*) FROM vision_drafts "
+        f"WHERE guild_id = ? AND player_user_id IN ({placeholders}) "
+        f"GROUP BY player_user_id",
+        [guild_id, *user_ids],
+    ).fetchall():
+        out.setdefault(row[0], {})["drafts_count"] = row[1]
+
+    return out
+
+
+# ── vision_outbox ─────────────────────────────────────────────────────────────
+
+@_with_reconnect
+def enqueue_inflict(
+    guild_id: str,
+    player_user_id: str,
+    st_user_id: str,
+    vision_type: str,
+    body: str,
+    now_iso: str,
+) -> int:
+    conn = get_db()
+    cur = conn.execute(
+        "INSERT INTO vision_outbox "
+        "(guild_id, player_user_id, st_user_id, vision_type, body, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (guild_id, player_user_id, st_user_id, vision_type, body, now_iso),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+@_with_reconnect
+def drain_outbox_pending(limit: int = 10) -> list[dict]:
+    """Return pending outbox rows oldest-first, up to `limit`."""
+    rows = get_db().execute(
+        "SELECT id, guild_id, player_user_id, st_user_id, vision_type, body "
+        "FROM vision_outbox WHERE status = 'pending' ORDER BY created_at LIMIT ?",
+        (limit,),
+    ).fetchall()
+    return [
+        {"id": r[0], "guild_id": r[1], "player_user_id": r[2], "st_user_id": r[3],
+         "vision_type": r[4], "body": r[5]}
+        for r in rows
+    ]
+
+
+@_with_reconnect
+def mark_outbox_sent(outbox_id: int, now_iso: str) -> None:
+    conn = get_db()
+    conn.execute(
+        "UPDATE vision_outbox SET status = 'sent', sent_at = ? WHERE id = ?",
+        (now_iso, outbox_id),
+    )
+    conn.commit()
+
+
+@_with_reconnect
+def mark_outbox_failed(outbox_id: int, error: str) -> None:
+    conn = get_db()
+    conn.execute(
+        "UPDATE vision_outbox SET status = 'failed', error = ? WHERE id = ?",
+        (error, outbox_id),
     )
     conn.commit()

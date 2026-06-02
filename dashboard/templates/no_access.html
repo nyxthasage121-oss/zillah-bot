@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Zillah — Not a Storyteller{% endblock %}
+
+{% block content %}
+<main class="max-w-[640px] mx-auto px-10 py-24">
+  <div class="gilded rounded-sm p-12 text-center">
+    <div class="smallcaps text-[11px] gold-text mb-3">Admittance Refused</div>
+    <h1 class="font-display text-4xl tracking-wide mb-4">No domain knows you yet</h1>
+    <p class="font-script italic text-lg text-bone-muted">
+      The Codex finds no Storyteller role assigned to you in any chronicle
+      where Zillah resides. Speak to the keeper of your server, and have
+      them grant you the role configured during <span class="gold-text">/setup</span>.
+    </p>
+    <div class="mt-10">
+      <a href="/auth/logout" class="btn-ghost smallcaps text-[11px] px-5 py-2.5 rounded-sm">Sign out</a>
+    </div>
+  </div>
+</main>
+{% endblock %}

@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zillah — The Kindred</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:    { 950: '#0a0708', 900: '#120d0f', 850: '#171012', 800: '#1f1618', 700: '#2a1f22' },
+          bone:   { DEFAULT: '#ece4d6', muted: '#c9bfb0', dim: '#8b8275' },
+          blood:  { DEFAULT: '#8a2424', bright: '#b03030', deep: '#3a1418' },
+          gold:   { DEFAULT: '#b08a3e', bright: '#d4a94d', dim: '#7a5e29' },
+          mauve:  { DEFAULT: '#4a3d44', dim: '#352b30' },
+        },
+        fontFamily: {
+          display: ['"Cinzel"', 'serif'],
+          script:  ['"Cormorant Garamond"', 'serif'],
+          serif:   ['"EB Garamond"', 'serif'],
+          sans:    ['Inter', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    background-color: #0a0708;
+    color: #ece4d6;
+    background-image:
+      radial-gradient(ellipse 1200px 600px at 50% -200px, rgba(138, 36, 36, 0.18), transparent 60%),
+      radial-gradient(ellipse 800px 400px at 100% 100%, rgba(176, 138, 62, 0.06), transparent 60%);
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode: overlay;
+  }
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 99;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%);
+  }
+  .rule { border-color: #2a1f22; }
+  .smallcaps { font-variant: all-small-caps; letter-spacing: 0.16em; }
+  .gilded {
+    background:
+      linear-gradient(180deg, rgba(176,138,62,0.04) 0%, rgba(176,138,62,0) 30%),
+      linear-gradient(180deg, #171012 0%, #120d0f 100%);
+    border: 1px solid #2a1f22;
+    box-shadow:
+      inset 0 0 0 1px rgba(176,138,62,0.05),
+      inset 0 1px 0 rgba(236, 228, 214, 0.03),
+      0 30px 60px -20px rgba(0,0,0,0.6);
+    transition: all 0.2s ease;
+  }
+  a.kindred-card { text-decoration: none; color: inherit; display: block; }
+  a.kindred-card:hover .gilded {
+    border-color: #b08a3e;
+    box-shadow:
+      inset 0 0 0 1px rgba(176,138,62,0.15),
+      0 30px 60px -20px rgba(176,48,48,0.35);
+    transform: translateY(-2px);
+  }
+  .pip {
+    width: 11px; height: 11px;
+    border: 1px solid #b08a3e;
+    transform: rotate(45deg);
+    display: inline-block;
+  }
+  .pip.filled {
+    background: linear-gradient(135deg, #b03030, #5a1010);
+    border-color: #d4a94d;
+  }
+  .hdot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    border: 1px solid #b08a3e;
+    display: inline-block;
+  }
+  .hdot.filled {
+    background: radial-gradient(circle at 35% 30%, #f0e0c0 0%, #b08a3e 60%, #6a4f1e 100%);
+  }
+  .dot::before { content: "·"; margin: 0 0.6rem; color: #4a3d44; }
+  .gold-text { color: #b08a3e; }
+  .clan-toreador { color: #d4a94d; }
+  .clan-tremere  { color: #b03030; }
+  .clan-malkavian { color: #8a4ab0; }
+  .clan-salubri  { color: #c9bfb0; }
+  .clan-hecata   { color: #6a8a4a; }
+  .clan-banuhaqim { color: #4a8a8a; }
+  .btn-ghost {
+    border: 1px solid #2a1f22;
+    color: #c9bfb0;
+    background: rgba(18,13,15,0.5);
+    transition: all .15s ease;
+  }
+  .btn-ghost:hover { border-color: #b08a3e; color: #ece4d6; }
+  .filter-active {
+    border-color: #b08a3e !important;
+    color: #ece4d6 !important;
+    background: linear-gradient(180deg, rgba(176,138,62,0.12), rgba(176,138,62,0.04)) !important;
+  }
+</style>
+</head>
+<body class="font-sans antialiased">
+
+<!-- TOP BAR -->
+<header class="border-b rule relative">
+  <div class="max-w-[1440px] mx-auto px-10 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14" stroke="#b08a3e" stroke-width="0.7"/>
+        <circle cx="16" cy="16" r="10" stroke="#b08a3e" stroke-width="0.4"/>
+        <path d="M16 4 L16 28 M4 16 L28 16 M7 7 L25 25 M25 7 L7 25" stroke="#b08a3e" stroke-width="0.4"/>
+        <circle cx="16" cy="16" r="2.5" fill="#8a2424" stroke="#d4a94d" stroke-width="0.5"/>
+      </svg>
+      <div class="leading-tight">
+        <div class="font-display tracking-[0.2em] text-xl">ZILLAH</div>
+        <div class="smallcaps text-[10px] text-gold">Storyteller's Codex</div>
+      </div>
+      <div class="ml-6 pl-6 border-l rule">
+        <div class="smallcaps text-[10px] text-bone-dim">Domain</div>
+        <div class="font-script text-base text-bone">St. Augustine by Night</div>
+      </div>
+    </div>
+    <nav class="flex items-center gap-7 text-sm text-bone-muted">
+      <a class="hover:text-bone smallcaps text-xs gold-text" href="kindred.html">Kindred</a>
+      <a class="hover:text-bone smallcaps text-xs" href="#" data-toast="Drafts gallery — not yet inscribed">Drafts <span class="gold-text">3</span></a>
+      <a class="hover:text-bone smallcaps text-xs" href="#" data-toast="Threads view — not yet inscribed">Threads</a>
+      <a class="hover:text-bone smallcaps text-xs" href="#" data-toast="Chronicle settings — not yet inscribed">Chronicle</a>
+      <span class="w-px h-5 bg-ink-700"></span>
+      <span class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-full bg-gradient-to-br from-blood to-blood-deep border border-gold-dim flex items-center justify-center text-[10px] gold-text">A</span>
+        <span class="text-bone-muted">storyteller_amelia</span>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-[1440px] mx-auto px-10 py-10">
+
+  <!-- header -->
+  <div class="flex items-end justify-between mb-2">
+    <div>
+      <div class="smallcaps text-[11px] gold-text">Domain Roster</div>
+      <h1 class="font-display text-5xl tracking-wide mt-1">The Kindred</h1>
+      <p class="font-script italic text-bone-muted mt-2 text-lg">Six souls inscribed in your chronicle · last vision inflicted 2 nights past</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <input type="text" placeholder="Search by name, clan, sire…"
+             class="bg-ink-900 border rule text-bone px-4 py-2.5 rounded-sm text-sm font-serif w-72 placeholder:italic placeholder:text-bone-dim focus:border-gold-dim focus:outline-none">
+      <button class="btn-ghost smallcaps text-[11px] px-4 py-2.5 rounded-sm">+ New Kindred</button>
+    </div>
+  </div>
+
+  <!-- filter row -->
+  <div class="flex items-center gap-2 mt-6 mb-8 flex-wrap">
+    <span class="smallcaps text-[10px] text-bone-dim mr-3">Filter by clan</span>
+    <button class="filter btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm filter-active" data-clan="all">All · 6</button>
+    <button class="filter btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm" data-clan="toreador">Toreador · 2</button>
+    <button class="filter btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm" data-clan="tremere">Tremere · 1</button>
+    <button class="filter btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm" data-clan="malkavian">Malkavian · 1</button>
+    <button class="filter btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm" data-clan="hecata">Hecata · 1</button>
+    <button class="filter btn-ghost smallcaps text-[10px] px-3 py-1.5 rounded-sm" data-clan="banuhaqim">Banu Haqim · 1</button>
+  </div>
+
+  <!-- grid -->
+  <div class="grid grid-cols-3 gap-6" id="grid">
+
+    <!-- Lucien -->
+    <a class="kindred-card" data-clan="toreador" href="editor-v2.html">
+      <div class="gilded rounded-sm p-6">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="smallcaps text-[10px] clan-toreador">Toreador · 8th Gen</div>
+            <h3 class="font-display text-2xl tracking-wide mt-1">Lucien Marchetti</h3>
+            <p class="font-script italic text-bone-muted text-sm mt-1">"The Rose of the Ponte Vecchio"</p>
+          </div>
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="opacity-40">
+            <circle cx="16" cy="16" r="14" stroke="#b08a3e" stroke-width="0.5"/>
+            <path d="M16 6 C 11 11, 11 16, 16 16 C 21 16, 21 11, 16 6 Z M6 16 C 11 11, 16 11, 16 16 C 16 21, 11 21, 6 16 Z M16 26 C 21 21, 21 16, 16 16 C 11 16, 11 21, 16 26 Z M26 16 C 21 21, 16 21, 16 16 C 16 11, 21 11, 26 16 Z" stroke="#b08a3e" stroke-width="0.5"/>
+          </svg>
+        </div>
+        <div class="mt-5 pt-4 border-t rule grid grid-cols-2 gap-3 text-[10px] smallcaps text-bone-dim">
+          <div>
+            <div class="mb-1">Hunger</div>
+            <div class="flex gap-1">
+              <span class="pip filled"></span><span class="pip filled"></span><span class="pip filled"></span>
+              <span class="pip"></span><span class="pip"></span>
+            </div>
+          </div>
+          <div>
+            <div class="mb-1">Humanity · 6</div>
+            <div class="flex gap-1">
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot"></span><span class="hdot"></span><span class="hdot"></span><span class="hdot"></span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t rule text-[11px] text-bone-muted leading-relaxed">
+          <div class="flex items-baseline justify-between">
+            <span class="italic">Last vision · 2 nights past</span>
+            <span class="smallcaps text-[10px] text-blood-bright">Resonance Bleed</span>
+          </div>
+          <div class="mt-2 italic">2 active threads · 3 unsent drafts</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Yseult -->
+    <a class="kindred-card" data-clan="tremere" href="editor-v2.html">
+      <div class="gilded rounded-sm p-6">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="smallcaps text-[10px] clan-tremere">Tremere · 9th Gen</div>
+            <h3 class="font-display text-2xl tracking-wide mt-1">Yseult Vasquez</h3>
+            <p class="font-script italic text-bone-muted text-sm mt-1">Regent of Chapter House Castile</p>
+          </div>
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="opacity-40">
+            <path d="M16 4 L26 22 L6 22 Z" stroke="#b03030" stroke-width="0.7"/>
+            <path d="M16 12 L20 19 L12 19 Z" stroke="#b03030" stroke-width="0.5"/>
+            <circle cx="16" cy="16" r="13" stroke="#b03030" stroke-width="0.3"/>
+          </svg>
+        </div>
+        <div class="mt-5 pt-4 border-t rule grid grid-cols-2 gap-3 text-[10px] smallcaps text-bone-dim">
+          <div>
+            <div class="mb-1">Hunger</div>
+            <div class="flex gap-1">
+              <span class="pip filled"></span><span class="pip"></span>
+              <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+            </div>
+          </div>
+          <div>
+            <div class="mb-1">Humanity · 5</div>
+            <div class="flex gap-1">
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot"></span><span class="hdot"></span><span class="hdot"></span><span class="hdot"></span><span class="hdot"></span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t rule text-[11px] text-bone-muted leading-relaxed">
+          <div class="flex items-baseline justify-between">
+            <span class="italic">Last vision · 6 nights past</span>
+            <span class="smallcaps text-[10px] text-bone-muted">The Warning</span>
+          </div>
+          <div class="mt-2 italic">1 active thread · 1 unsent draft</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Cassiel -->
+    <a class="kindred-card" data-clan="malkavian" href="editor-v2.html">
+      <div class="gilded rounded-sm p-6">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="smallcaps text-[10px] clan-malkavian">Malkavian · 7th Gen</div>
+            <h3 class="font-display text-2xl tracking-wide mt-1">Cassiel</h3>
+            <p class="font-script italic text-bone-muted text-sm mt-1">no surname remembered · the Cobwalker</p>
+          </div>
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="opacity-40">
+            <circle cx="16" cy="16" r="13" stroke="#8a4ab0" stroke-width="0.5"/>
+            <path d="M16 3 L16 29 M3 16 L29 16" stroke="#8a4ab0" stroke-width="0.3"/>
+            <path d="M7 7 L25 25 M25 7 L7 25" stroke="#8a4ab0" stroke-width="0.3"/>
+            <circle cx="16" cy="16" r="6" stroke="#8a4ab0" stroke-width="0.5" stroke-dasharray="2 2"/>
+          </svg>
+        </div>
+        <div class="mt-5 pt-4 border-t rule grid grid-cols-2 gap-3 text-[10px] smallcaps text-bone-dim">
+          <div>
+            <div class="mb-1">Hunger</div>
+            <div class="flex gap-1">
+              <span class="pip filled"></span><span class="pip filled"></span><span class="pip filled"></span>
+              <span class="pip filled"></span><span class="pip"></span>
+            </div>
+          </div>
+          <div>
+            <div class="mb-1">Humanity · 3</div>
+            <div class="flex gap-1">
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot"></span><span class="hdot"></span><span class="hdot"></span>
+              <span class="hdot"></span><span class="hdot"></span><span class="hdot"></span><span class="hdot"></span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t rule text-[11px] text-bone-muted leading-relaxed">
+          <div class="flex items-baseline justify-between">
+            <span class="italic">Last vision · last night</span>
+            <span class="smallcaps text-[10px] text-bone-muted">Nightmare Bleed</span>
+          </div>
+          <div class="mt-2 italic">4 active threads · no drafts</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Aurelio -->
+    <a class="kindred-card" data-clan="toreador" href="editor-v2.html">
+      <div class="gilded rounded-sm p-6">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="smallcaps text-[10px] clan-toreador">Toreador · 11th Gen</div>
+            <h3 class="font-display text-2xl tracking-wide mt-1">Aurelio Cortés</h3>
+            <p class="font-script italic text-bone-muted text-sm mt-1">Master of the Belmont Theatre</p>
+          </div>
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="opacity-40">
+            <circle cx="16" cy="16" r="14" stroke="#b08a3e" stroke-width="0.5"/>
+            <path d="M16 6 C 11 11, 11 16, 16 16 C 21 16, 21 11, 16 6 Z M6 16 C 11 11, 16 11, 16 16 C 16 21, 11 21, 6 16 Z M16 26 C 21 21, 21 16, 16 16 C 11 16, 11 21, 16 26 Z M26 16 C 21 21, 16 21, 16 16 C 16 11, 21 11, 26 16 Z" stroke="#b08a3e" stroke-width="0.5"/>
+          </svg>
+        </div>
+        <div class="mt-5 pt-4 border-t rule grid grid-cols-2 gap-3 text-[10px] smallcaps text-bone-dim">
+          <div>
+            <div class="mb-1">Hunger</div>
+            <div class="flex gap-1">
+              <span class="pip filled"></span><span class="pip filled"></span>
+              <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+            </div>
+          </div>
+          <div>
+            <div class="mb-1">Humanity · 7</div>
+            <div class="flex gap-1">
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot"></span><span class="hdot"></span><span class="hdot"></span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t rule text-[11px] text-bone-muted leading-relaxed">
+          <div class="flex items-baseline justify-between">
+            <span class="italic">Last vision · 4 nights past</span>
+            <span class="smallcaps text-[10px] text-bone-muted">Echo Vision</span>
+          </div>
+          <div class="mt-2 italic">1 active thread · 2 unsent drafts</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Sister Magdalene -->
+    <a class="kindred-card" data-clan="hecata" href="editor-v2.html">
+      <div class="gilded rounded-sm p-6">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="smallcaps text-[10px] clan-hecata">Hecata · 10th Gen</div>
+            <h3 class="font-display text-2xl tracking-wide mt-1">Sister Magdalene</h3>
+            <p class="font-script italic text-bone-muted text-sm mt-1">of the Giovanni faction · keeps the Old Cemetery</p>
+          </div>
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="opacity-40">
+            <circle cx="16" cy="16" r="13" stroke="#6a8a4a" stroke-width="0.5"/>
+            <path d="M16 6 L16 24 M10 16 L22 16" stroke="#6a8a4a" stroke-width="0.7"/>
+            <circle cx="16" cy="16" r="3" stroke="#6a8a4a" stroke-width="0.5"/>
+          </svg>
+        </div>
+        <div class="mt-5 pt-4 border-t rule grid grid-cols-2 gap-3 text-[10px] smallcaps text-bone-dim">
+          <div>
+            <div class="mb-1">Hunger</div>
+            <div class="flex gap-1">
+              <span class="pip"></span><span class="pip"></span>
+              <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+            </div>
+          </div>
+          <div>
+            <div class="mb-1">Humanity · 6</div>
+            <div class="flex gap-1">
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot"></span><span class="hdot"></span><span class="hdot"></span><span class="hdot"></span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t rule text-[11px] text-bone-muted leading-relaxed">
+          <div class="flex items-baseline justify-between">
+            <span class="italic">Last vision · 11 nights past</span>
+            <span class="smallcaps text-[10px] text-bone-muted">Retrocognition</span>
+          </div>
+          <div class="mt-2 italic">no active threads · no drafts</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Idris -->
+    <a class="kindred-card" data-clan="banuhaqim" href="editor-v2.html">
+      <div class="gilded rounded-sm p-6">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="smallcaps text-[10px] clan-banuhaqim">Banu Haqim · 8th Gen</div>
+            <h3 class="font-display text-2xl tracking-wide mt-1">Idris al-Najjar</h3>
+            <p class="font-script italic text-bone-muted text-sm mt-1">Judge of the Anarch Council</p>
+          </div>
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" class="opacity-40">
+            <circle cx="16" cy="16" r="13" stroke="#4a8a8a" stroke-width="0.5"/>
+            <path d="M16 5 L20 16 L16 27 L12 16 Z" stroke="#4a8a8a" stroke-width="0.6"/>
+            <path d="M5 16 L27 16" stroke="#4a8a8a" stroke-width="0.4"/>
+          </svg>
+        </div>
+        <div class="mt-5 pt-4 border-t rule grid grid-cols-2 gap-3 text-[10px] smallcaps text-bone-dim">
+          <div>
+            <div class="mb-1">Hunger</div>
+            <div class="flex gap-1">
+              <span class="pip filled"></span><span class="pip filled"></span>
+              <span class="pip filled"></span><span class="pip"></span><span class="pip"></span>
+            </div>
+          </div>
+          <div>
+            <div class="mb-1">Humanity · 7</div>
+            <div class="flex gap-1">
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span><span class="hdot filled"></span>
+              <span class="hdot"></span><span class="hdot"></span><span class="hdot"></span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t rule text-[11px] text-bone-muted leading-relaxed">
+          <div class="flex items-baseline justify-between">
+            <span class="italic">Last vision · 9 nights past</span>
+            <span class="smallcaps text-[10px] text-bone-muted">The Witness</span>
+          </div>
+          <div class="mt-2 italic">1 active thread · no drafts</div>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</main>
+
+<footer class="border-t rule mt-12">
+  <div class="max-w-[1440px] mx-auto px-10 py-5 flex items-center justify-between text-[11px] text-bone-dim">
+    <span class="smallcaps">Zillah · v0.2 mockup</span>
+    <svg width="60" height="14" viewBox="0 0 60 14" fill="none">
+      <path d="M0 7 L24 7 M36 7 L60 7" stroke="#b08a3e" stroke-width="0.6"/>
+      <path d="M30 1 L33 7 L30 13 L27 7 Z" stroke="#b08a3e" stroke-width="0.6" fill="rgba(138,36,36,0.4)"/>
+    </svg>
+    <span class="smallcaps">The night is long</span>
+  </div>
+</footer>
+
+<!-- Toast -->
+<div id="toast" style="
+  position: fixed; bottom: 32px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: linear-gradient(180deg, #1f1618 0%, #120d0f 100%);
+  color: #ece4d6; border: 1px solid #b08a3e;
+  box-shadow: 0 12px 40px -8px rgba(0,0,0,0.8), inset 0 1px 0 rgba(176,138,62,0.2);
+  padding: 14px 26px; border-radius: 2px;
+  font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  opacity: 0; pointer-events: none;
+  transition: all 0.3s ease; z-index: 200;
+">Saved</div>
+
+<script>
+(function(){
+  const toast = document.getElementById('toast');
+  let t;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(t);
+    t = setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(20px)';
+    }, 2200);
+  }
+  document.querySelectorAll('[data-toast]').forEach(el => {
+    el.addEventListener('click', e => { e.preventDefault(); showToast(el.dataset.toast); });
+  });
+
+  // Filter
+  const buttons = document.querySelectorAll('.filter');
+  const cards = document.querySelectorAll('.kindred-card');
+  buttons.forEach(b => {
+    b.addEventListener('click', () => {
+      buttons.forEach(x => x.classList.remove('filter-active'));
+      b.classList.add('filter-active');
+      const clan = b.dataset.clan;
+      cards.forEach(c => {
+        c.style.display = (clan === 'all' || c.dataset.clan === clan) ? '' : 'none';
+      });
+    });
+  });
+
+  // Search
+  const search = document.querySelector('input[type="text"]');
+  search.addEventListener('input', () => {
+    const q = search.value.toLowerCase();
+    cards.forEach(c => {
+      c.style.display = c.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+
+  // New Kindred
+  document.querySelectorAll('button').forEach(b => {
+    if (b.textContent.trim() === '+ New Kindred') {
+      b.addEventListener('click', () => showToast('New Kindred form — not yet inscribed'));
+    }
+  });
+})();
+</script>
+</body>
+</html>
