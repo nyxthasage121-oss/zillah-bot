@@ -31,9 +31,11 @@ def create_bot() -> tuple[discord.Client, app_commands.CommandTree]:
     async def on_ready() -> None:
         db.setup_database()
         # Guard tree.sync() to only run once on initial startup. discord.py
-        # fires on_ready on every reconnect; each tree.sync() is a heavy
-        # PUT-per-guild that, accumulated, can trip Cloudflare's 1015
-        # IP-level rate limit on discord.com.
+        # fires on_ready on every reconnect (gateway maintenance, network
+        # blips); each tree.sync() is a heavy PUT-per-guild that, accumulated
+        # over many reconnects, can trip Cloudflare's 1015 IP-level rate
+        # limit on discord.com — after which every interaction REST callback
+        # fails and users see "this interaction failed."
         if not getattr(bot, "_synced", False):
             await tree.sync()
             bot._synced = True
