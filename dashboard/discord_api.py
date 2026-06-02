@@ -1,4 +1,5 @@
 """Thin async wrappers around the Discord REST API for OAuth + member lookups."""
+import os
 import httpx
 from urllib.parse import urlencode
 
@@ -9,6 +10,12 @@ from dashboard.config import (
     DISCORD_REDIRECT_URI,
     DISCORD_OAUTH_SCOPES,
 )
+
+
+def _bot_headers() -> dict[str, str]:
+    """Headers for endpoints that require the bot token, not an OAuth user token."""
+    token = os.getenv("DISCORD_TOKEN", "")
+    return {"Authorization": f"Bot {token}"}
 
 
 def authorize_url(state: str) -> str:
@@ -70,5 +77,32 @@ async def fetch_my_member(access_token: str, guild_id: str) -> dict | None:
         )
         if r.status_code == 404:
             return None
+        r.raise_for_status()
+        return r.json()
+
+
+# ── bot-token endpoints (server-side, not OAuth) ─────────────────────────────
+
+async def fetch_guild_roles(guild_id: str) -> list[dict]:
+    """List all roles in a guild. Used to map role IDs → role names."""
+    async with httpx.AsyncClient(timeout=10) as http:
+        r = await http.get(
+            f"{DISCORD_API_BASE}/guilds/{guild_id}/roles",
+            headers=_bot_headers(),
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+async def fetch_guild_members(guild_id: str, limit: int = 1000) -> list[dict]:
+    """List members of a guild. Requires the bot's privileged GUILD_MEMBERS intent
+    (already enabled in bot.py). Default limit is the Discord max per request;
+    chronicles larger than that would need pagination."""
+    async with httpx.AsyncClient(timeout=15) as http:
+        r = await http.get(
+            f"{DISCORD_API_BASE}/guilds/{guild_id}/members",
+            headers=_bot_headers(),
+            params={"limit": limit},
+        )
         r.raise_for_status()
         return r.json()

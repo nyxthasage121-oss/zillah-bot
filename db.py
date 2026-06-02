@@ -626,6 +626,51 @@ def get_draft(draft_id: int) -> dict | None:
     }
 
 
+# ── aggregations for the dashboard ──────────────────────────────────────────
+
+@_with_reconnect
+def get_roster_aggregates(guild_id: str, user_ids: list[str]) -> dict[str, dict]:
+    """For each user_id in the list, return aggregate stats:
+        { last_vision_type, last_vision_when, threads_count, drafts_count }
+    Users with no activity are absent from the returned dict.
+    """
+    if not user_ids:
+        return {}
+
+    placeholders = ",".join("?" * len(user_ids))
+    out: dict[str, dict] = {}
+
+    # Last vision per user: filter to the max-id row per (guild, user).
+    for row in get_db().execute(
+        f"SELECT user_id, vision_type, timestamp FROM vision_history "
+        f"WHERE guild_id = ? AND user_id IN ({placeholders}) "
+        f"AND id IN (SELECT MAX(id) FROM vision_history WHERE guild_id = ? "
+        f"AND user_id IN ({placeholders}) GROUP BY user_id)",
+        [guild_id, *user_ids, guild_id, *user_ids],
+    ).fetchall():
+        out.setdefault(row[0], {})
+        out[row[0]]["last_vision_type"] = row[1]
+        out[row[0]]["last_vision_when"] = row[2]
+
+    for row in get_db().execute(
+        f"SELECT user_id, COUNT(*) FROM vision_threads "
+        f"WHERE guild_id = ? AND user_id IN ({placeholders}) AND is_active = 1 "
+        f"GROUP BY user_id",
+        [guild_id, *user_ids],
+    ).fetchall():
+        out.setdefault(row[0], {})["threads_count"] = row[1]
+
+    for row in get_db().execute(
+        f"SELECT player_user_id, COUNT(*) FROM vision_drafts "
+        f"WHERE guild_id = ? AND player_user_id IN ({placeholders}) "
+        f"GROUP BY player_user_id",
+        [guild_id, *user_ids],
+    ).fetchall():
+        out.setdefault(row[0], {})["drafts_count"] = row[1]
+
+    return out
+
+
 # ── vision_outbox ─────────────────────────────────────────────────────────────
 
 @_with_reconnect

@@ -25,7 +25,7 @@ async def home(request: Request):
 async def kindred_list(request: Request, guild_id: str):
     auth.require_login(request)
     guild = auth.require_guild_access(request, guild_id)
-    roster = data.list_kindred(guild_id)
+    roster = await data.list_kindred(guild_id)
     return templates.TemplateResponse(
         request,
         "kindred_list.html",
@@ -43,7 +43,7 @@ async def kindred_list(request: Request, guild_id: str):
 async def kindred_editor(request: Request, guild_id: str, user_id: str):
     auth.require_login(request)
     guild = auth.require_guild_access(request, guild_id)
-    detail = data.get_kindred(guild_id, user_id)
+    detail = await data.get_kindred(guild_id, user_id)
     if not detail:
         raise HTTPException(404, "No such Kindred in this domain.")
     # Raw DB rows for the _drafts_list partial (column shape matches what HTMX
